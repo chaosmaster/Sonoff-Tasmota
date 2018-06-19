@@ -140,6 +140,8 @@ uint8_t backlog_pointer = 0;                // Command backlog pointer
 uint8_t backlog_mutex = 0;                  // Command backlog pending
 uint16_t backlog_delay = 0;                 // Command backlog delay
 uint8_t interlock_mutex = 0;                // Interlock power command pending
+uint8_t tuya_cmd_status = 0;                // Tuya protocol status
+uint8_t tuya_current_dimmer = 0;            // Tuya current dimmer;
 
 #ifdef USE_MQTT_TLS
   WiFiClientSecure EspClient;               // Wifi Secure Client
@@ -336,6 +338,35 @@ void SetDevicePower(power_t rpower, int source)
     Serial.write(0xA1);
     Serial.write('\n');
     Serial.flush();
+  }
+  else if (TUYA_DIMMER == Settings.module) {
+    if(source != SRC_DISPLAY){
+
+      /*
+      Serial.write(0x55); // header 55AA
+      Serial.write(0xAA);
+      Serial.write(0x00); // version 00
+      Serial.write(0x02); // command 08 - get control-mode
+      Serial.write(0x00);
+      Serial.write(0x00); // following data length 0x01
+      Serial.write(0x01); // checksum:sum of all bytes in packet mod 256
+      Serial.flush();
+      */
+
+      Serial.write(0x55); // header 55AA
+      Serial.write(0xAA);
+      Serial.write(0x00); // version 00
+      Serial.write(0x06); // command 06 - send order
+      Serial.write(0x00);
+      Serial.write(0x05); // following data length 0x05
+      Serial.write(0x01); // id
+      Serial.write(0x01); // boolean
+      Serial.write(0x00); // length
+      Serial.write(0x01); // length
+      Serial.write(rpower); // status
+      Serial.write(0x0D + rpower); // checksum:sum of all bytes in packet mod 256
+      Serial.flush();
+    }
   }
   else if (EXS_RELAY == Settings.module) {
     SetLatchingRelay(rpower, 1);
@@ -1565,6 +1596,15 @@ void ButtonHandler()
             ExecuteCommandPower(button_index +1, POWER_TOGGLE, SRC_BUTTON);  // Execute Toggle command internally
           }
         }
+      } else if (TUYA_DIMMER == Settings.module) {
+        if ((PRESSED == button) && (NOT_PRESSED == lastbutton[button_index])) {
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_APPLICATION D_BUTTON "%d " D_LEVEL_10), button_index +1);
+          AddLog(LOG_LEVEL_DEBUG);
+          if (!Settings.flag.button_restrict) {
+            snprintf_P(scmnd, sizeof(scmnd), D_CMND_WIFICONFIG " 2");
+            ExecuteCommand(scmnd, SRC_BUTTON);
+          }
+        }
       } else {
         if ((PRESSED == button) && (NOT_PRESSED == lastbutton[button_index])) {
           if (Settings.flag.button_single) {          // Allow only single button press for immediate action
@@ -2037,6 +2077,7 @@ void ArduinoOTAInit()
 
 void SerialInput()
 {
+  char scmnd[20];
   while (Serial.available()) {
     yield();
     serial_in_byte = Serial.read();
@@ -2062,10 +2103,83 @@ void SerialInput()
         dual_hex_code = 3;
       }
     }
-
 /*-------------------------------------------------------------------------------------------*\
- * Sonoff bridge 19200 baud serial interface
+ * Tuya Dimmer 9600 baud serial interface
 \*-------------------------------------------------------------------------------------------*/
+    if (TUYA_DIMMER == Settings.module) {
+      //snprintf_P(log_data, sizeof(log_data), "Serial Byte: %02X", serial_in_byte);
+      //AddLog(LOG_LEVEL_DEBUG);
+      switch (tuya_cmd_status) {
+        case 0:
+          if (serial_in_byte == 0x55) tuya_cmd_status = 1;
+          break;
+        case 1:
+          if (serial_in_byte != 0xAA) tuya_cmd_status = 0;
+          else tuya_cmd_status = 2;
+          break;
+        case 3:
+          if (serial_in_byte != 0x07){
+            tuya_cmd_status = 0;
+            if (serial_in_byte == 0x02){
+              snprintf_P(log_data, sizeof(log_data), "Received Mode!");
+              AddLog(LOG_LEVEL_DEBUG);
+            }
+          }
+          else tuya_cmd_status = 4;
+          break;
+        case 6:
+          if (serial_in_byte == 0x01) tuya_cmd_status = 7;
+          else if (serial_in_byte == 0x02) tuya_cmd_status = 8;
+          else tuya_cmd_status = 0;
+          break;
+        case 7:
+          if (serial_in_byte != 0x01) tuya_cmd_status = 0;
+          else tuya_cmd_status = 9;
+          break;
+        case 9:
+        case 12:
+        case 14:
+        case 15:
+        case 16:
+          if (serial_in_byte != 0x00) tuya_cmd_status = 0;
+        case 2:
+        case 4:
+        case 5:
+          tuya_cmd_status && tuya_cmd_status++;
+          break;
+        case 10:
+          if (serial_in_byte != 0x01) tuya_cmd_status = 0;
+          else tuya_cmd_status = 11;
+          break;
+        case 11:
+          if((power || Settings.light_dimmer > 0) && (power != serial_in_byte)) ExecuteCommandPower(1, serial_in_byte, SRC_DISPLAY);
+          tuya_cmd_status = 0;
+          snprintf_P(log_data, sizeof(log_data), "Received Power Status: %d, power: % d", serial_in_byte, power);
+          AddLog(LOG_LEVEL_DEBUG);
+        case 8:
+          if (serial_in_byte != 0x02) tuya_cmd_status = 0;
+          else tuya_cmd_status = 12;
+          break;
+        case 13:
+          if (serial_in_byte != 0x04) tuya_cmd_status = 0;
+          else tuya_cmd_status = 14;
+          break;
+        case 17:
+          tuya_current_dimmer = round(serial_in_byte * (100. / 255.));
+          if ((power || !Settings.light_dimmer ) && tuya_current_dimmer > 0 ) {
+            snprintf_P(scmnd, sizeof(scmnd), PSTR(D_CMND_DIMMER " %d"), (tuya_current_dimmer | 0x0100));
+            ExecuteCommand(scmnd, SRC_DISPLAY);
+          }
+          snprintf_P(log_data, sizeof(log_data), "Received Dimmer Status: %d, Settings.light_dimmer %d, serial_in_byte %d", tuya_current_dimmer, Settings.light_dimmer, serial_in_byte);
+          AddLog(LOG_LEVEL_DEBUG);
+          tuya_cmd_status = 0;
+          break;
+      }
+    }
+
+  /*-------------------------------------------------------------------------------------------*\
+   * Sonoff bridge 19200 baud serial interface
+  \*-------------------------------------------------------------------------------------------*/
     if (SONOFF_BRIDGE == Settings.module) {
       if (SonoffBridgeSerialInput()) {
         serial_in_byte_counter = 0;
@@ -2252,6 +2366,13 @@ void GpioInit()
     devices_present = 2;
     baudrate = 19200;
   }
+  else if (TUYA_DIMMER == Settings.module) {
+    Settings.flag.mqtt_serial = 0;
+    devices_present = 1;
+    baudrate = 9600;
+    light_type = LT_PWM1;
+    Serial.setDebugOutput(false);
+  }
   else if (CH4 == Settings.module) {
     Settings.flag.mqtt_serial = 0;
     devices_present = 4;
@@ -2386,6 +2507,32 @@ void setup()
     snprintf_P(my_hostname, sizeof(my_hostname)-1, Settings.hostname);
   }
   WifiConnect();
+
+  if (TUYA_DIMMER == Settings.module) { // Set WiFi-State and get status
+    snprintf_P(log_data, sizeof(log_data), "Get MCU state");
+    AddLog(LOG_LEVEL_DEBUG);
+    /*
+    Serial.write(0x55); // header 55AA
+    Serial.write(0xAA);
+    Serial.write(0x00); // version 00
+    Serial.write(0x03); // command 08 - set wifi-state
+    Serial.write(0x00);
+    Serial.write(0x01); // following data length 0x01
+    Serial.write(0x03); // state (3 Configured and connected)
+    Serial.write((0x103 + 0x03) % 256); // checksum:sum of all bytes in packet mod 256
+    Serial.flush();
+    */
+
+    Serial.write(0x55); // header 55AA
+    Serial.write(0xAA);
+    Serial.write(0x00); // version 00
+    Serial.write(0x08); // command 08 - get status
+    Serial.write(0x00);
+    Serial.write(0x00); // following data length 0x00
+    Serial.write(0x07); // checksum:sum of all bytes in packet mod 256
+    Serial.flush();
+
+  }
 
   if (MOTOR == Settings.module) Settings.poweronstate = POWER_ALL_ON;  // Needs always on else in limbo!
   if (POWER_ALL_ALWAYS_ON == Settings.poweronstate) {

@@ -135,6 +135,10 @@ unsigned int arilux_rf_repeat_count = 0;
 
 uint8_t arilux_rf_toggle = 0;
 
+boolean tuya_hardware_sync = false;
+boolean tuya_hardware_synced = false;
+uint8_t tuya_hardware_value = 0;
+
 
 #ifndef ARDUINO_ESP8266_RELEASE_2_3_0
 #ifndef USE_WS2812_DMA  // Collides with Neopixelbus but solves RF misses
@@ -463,6 +467,30 @@ void LightSetDimmer(uint8_t myDimmer)
       temp = (float)Settings.light_color[i] / dimmer;
     }
     light_current_color[i] = (uint8_t)temp;
+    if (TUYA_DIMMER == Settings.module && (!tuya_hardware_sync)) {
+      if(light_current_color[i] < 2) light_current_color[i] = 2;
+      snprintf_P(log_data, sizeof(log_data), "light_current_color %d, tuya_hardware_value: %d, tuya_hardware_synced: %d", light_current_color[i], tuya_hardware_value, tuya_hardware_synced);
+      AddLog(LOG_LEVEL_DEBUG);
+
+      tuya_hardware_synced = false;
+
+      Serial.write(0x55); // header 55AA
+      Serial.write(0xAA);
+      Serial.write(0x00); // version 00
+      Serial.write(0x06); // command 06 - send order
+      Serial.write(0x00);
+      Serial.write(0x08); // following data length 0x05
+      Serial.write(0x02); // id
+      Serial.write(0x02); // type = value
+      Serial.write(0x00); // length
+      Serial.write(0x04); // length
+      Serial.write(0x00);
+      Serial.write(0x00);
+      Serial.write(0x00);
+      Serial.write(light_current_color[i]); // status
+      Serial.write((0x115 + light_current_color[i]) % 256); // checksum:sum of all bytes in packet mod 256
+      Serial.flush();
+    }
   }
 }
 
@@ -1210,12 +1238,26 @@ boolean LightCommand()
     else if ('-' == option) {
       XdrvMailbox.payload = (Settings.light_dimmer < 11) ? 1 : Settings.light_dimmer - 10;
     }
-    if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 100)) {
-      Settings.light_dimmer = XdrvMailbox.payload;
-      light_update = 1;
-      coldim = true;
+    if (XdrvMailbox.payload & 0x0100){
+      tuya_hardware_sync = true;
+      XdrvMailbox.payload &= 0xFF;
+      tuya_hardware_value = XdrvMailbox.payload;
+      if(abs(tuya_hardware_value - Settings.light_dimmer) <= 1) {
+        tuya_hardware_synced = true;
+      }
     } else {
-      snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_NVALUE, command, Settings.light_dimmer);
+      tuya_hardware_sync = false;
+    }
+    snprintf_P(log_data, sizeof(log_data), "payload %d, flag %d", XdrvMailbox.payload, tuya_hardware_sync);
+    AddLog(LOG_LEVEL_DEBUG);
+    if(tuya_hardware_synced || !tuya_hardware_sync) {
+      if ((XdrvMailbox.payload >= 0) && (XdrvMailbox.payload <= 100)) {
+        Settings.light_dimmer = XdrvMailbox.payload;
+        light_update = 1;
+        coldim = true;
+      } else {
+        snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_NVALUE, command, Settings.light_dimmer);
+      }
     }
   }
   else if (CMND_LEDTABLE == command_code) {

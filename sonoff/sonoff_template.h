@@ -191,6 +191,7 @@ enum SupportedModules {
   SONOFF_S31,
   ZENGGE_ZF_WF017,
   SONOFF_POW_R2,
+  TUYA_DIMMER,
   MAXMODULE };
 
 /********************************************************************************************/
@@ -251,7 +252,8 @@ const uint8_t kNiceList[MAXMODULE] PROGMEM = {
   KMC_70011,
   AILIGHT,
   WEMOS,
-  WITTY
+  WITTY,
+  TUYA_DIMMER
 };
 
 // Default module settings
@@ -826,7 +828,20 @@ const mytmplt kModules[MAXMODULE] PROGMEM = {
      GPIO_REL1,        // GPIO12 Red Led and Relay (0 = Off, 1 = On)
      GPIO_LED1_INV,    // GPIO13 Blue Led (0 = On, 1 = Off)
      0, 0, 0, 0
-  }
+  },
+  { "Tuya Dimmer",     // Tuya Dimmer (ESP8266)
+     GPIO_KEY1,        // Virtual Button (controlled by MCU)
+     GPIO_TXD,         // GPIO01 MCU serial control
+     0,
+     GPIO_RXD,         // GPIO03 MCU serial control
+     0,
+     0,
+     0, 0, 0, 0, 0, 0, // Flash connection
+     0,
+     0,
+     GPIO_LED1,        // GPIO14 Green Led
+     0, 0, 0
+  },
 };
 
 /*
