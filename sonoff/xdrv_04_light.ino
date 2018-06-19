@@ -1242,7 +1242,7 @@ boolean LightCommand()
       tuya_hardware_sync = true;
       XdrvMailbox.payload &= 0xFF;
       tuya_hardware_value = XdrvMailbox.payload;
-      if(abs(tuya_hardware_value - Settings.light_dimmer) <= 1) {
+      if(abs(tuya_hardware_value - Settings.light_dimmer) <= 2) {
         tuya_hardware_synced = true;
       }
     } else {
