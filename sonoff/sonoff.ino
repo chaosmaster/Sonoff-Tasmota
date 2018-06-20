@@ -358,6 +358,23 @@ void SetDevicePower(power_t rpower, int source)
       Serial.write(0x00); // version 00
       Serial.write(0x06); // command 06 - send order
       Serial.write(0x00);
+      Serial.write(0x08); // following data length 0x05
+      Serial.write(0x02); // id
+      Serial.write(0x02); // type = value
+      Serial.write(0x00); // length
+      Serial.write(0x04); // length
+      Serial.write(0x00);
+      Serial.write(0x00);
+      Serial.write(0x00);
+      Serial.write(round(Settings.light_dimmer / (100. / 255.))); // status
+      Serial.write((0x115 + round(Settings.light_dimmer / (100. / 255.))) % 256); // checksum:sum of all bytes in packet mod 256
+      Serial.flush();
+
+      Serial.write(0x55); // header 55AA
+      Serial.write(0xAA);
+      Serial.write(0x00); // version 00
+      Serial.write(0x06); // command 06 - send order
+      Serial.write(0x00);
       Serial.write(0x05); // following data length 0x05
       Serial.write(0x01); // id
       Serial.write(0x01); // boolean
