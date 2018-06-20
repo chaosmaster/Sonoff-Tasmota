@@ -341,7 +341,6 @@ void SetDevicePower(power_t rpower, int source)
   }
   else if (TUYA_DIMMER == Settings.module) {
     if(source != SRC_DISPLAY){
-
       /*
       Serial.write(0x55); // header 55AA
       Serial.write(0xAA);
@@ -353,6 +352,7 @@ void SetDevicePower(power_t rpower, int source)
       Serial.flush();
       */
 
+      /*
       Serial.write(0x55); // header 55AA
       Serial.write(0xAA);
       Serial.write(0x00); // version 00
@@ -366,23 +366,26 @@ void SetDevicePower(power_t rpower, int source)
       Serial.write(0x00);
       Serial.write(0x00);
       Serial.write(0x00);
-      Serial.write(round(Settings.light_dimmer / (100. / 255.))); // status
-      Serial.write((0x115 + round(Settings.light_dimmer / (100. / 255.))) % 256); // checksum:sum of all bytes in packet mod 256
-      Serial.flush();
+      Serial.write(tuya_current_dimmer); // status
+      Serial.write((0x115 + tuya_current_dimmer) % 256); // checksum:sum of all bytes in packet mod 256
+      */
 
-      Serial.write(0x55); // header 55AA
-      Serial.write(0xAA);
-      Serial.write(0x00); // version 00
-      Serial.write(0x06); // command 06 - send order
-      Serial.write(0x00);
-      Serial.write(0x05); // following data length 0x05
-      Serial.write(0x01); // id
-      Serial.write(0x01); // boolean
-      Serial.write(0x00); // length
-      Serial.write(0x01); // length
-      Serial.write(rpower); // status
-      Serial.write(0x0D + rpower); // checksum:sum of all bytes in packet mod 256
-      Serial.flush();
+      for(int i=0; i < 2; ++i) { // Send command twice
+        Serial.write(0x55); // header 55AA
+        Serial.write(0xAA);
+        Serial.write(0x00); // version 00
+        Serial.write(0x06); // command 06 - send order
+        Serial.write(0x00);
+        Serial.write(0x05); // following data length 0x05
+        Serial.write(0x01); // id
+        Serial.write(0x01); // boolean
+        Serial.write(0x00); // length
+        Serial.write(0x01); // length
+        Serial.write(rpower); // status
+        Serial.write(0x0D + rpower); // checksum:sum of all bytes in packet mod 256
+  
+        Serial.flush();
+      }
     }
   }
   else if (EXS_RELAY == Settings.module) {
@@ -2183,7 +2186,7 @@ void SerialInput()
           break;
         case 17:
           tuya_current_dimmer = round(serial_in_byte * (100. / 255.));
-          if ((power || !Settings.light_dimmer ) && tuya_current_dimmer > 0 ) {
+          if ((power || !Settings.light_dimmer ) && (tuya_current_dimmer > 0) && (abs(tuya_current_dimmer - Settings.light_dimmer) > 2) ) {
             snprintf_P(scmnd, sizeof(scmnd), PSTR(D_CMND_DIMMER " %d"), (tuya_current_dimmer | 0x0100));
             ExecuteCommand(scmnd, SRC_DISPLAY);
           }
