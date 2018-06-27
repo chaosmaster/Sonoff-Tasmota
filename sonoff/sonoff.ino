@@ -183,6 +183,7 @@ uint8_t light_type = 0;                     // Light types
 bool pwm_present = false;                   // Any PWM channel configured with SetOption15 0
 boolean mdns_begun = false;
 uint8_t ntp_force_sync = 0;                 // Force NTP sync
+RulesBitfield rules_flag;
 
 char my_version[33];                        // Composed version string
 char my_hostname[33];                       // Composed Wifi hostname
@@ -441,6 +442,8 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
   uint16_t index;
   uint32_t address;
 
+  ShowFreeMem(PSTR("MqttDataHandler"));
+
   strncpy(topicBuf, topic, sizeof(topicBuf));
   for (i = 0; i < data_len; i++) {
     if (!isspace(data[i])) break;
@@ -620,7 +623,7 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
       XsnsCall(FUNC_COMMAND);
 //      if (!XsnsCall(FUNC_COMMAND)) type = NULL;
     }
-    else if ((CMND_SETOPTION == command_code) && ((index <= 26) || ((index > 31) && (index <= P_MAX_PARAM8 + 31)))) {
+    else if ((CMND_SETOPTION == command_code) && ((index <= 29) || ((index > 31) && (index <= P_MAX_PARAM8 + 31)))) {
       if (index <= 31) {
         ptype = 0;   // SetOption0 .. 31
       } else {
@@ -655,6 +658,9 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
 //              case 24:  // rules_once
 //              case 25:  // knx_enabled
               case 26:  // device_index_enable
+//              case 27:  // knx_enable_enhancement
+              case 28:  // rf_receive_decimal
+              case 29:  // ir_receive_decimal
                 bitWrite(Settings.flag.data, index, payload);
             }
             if (12 == index) {  // stop_flash_rotate
@@ -842,8 +848,13 @@ void MqttDataHandler(char* topic, byte* data, unsigned int data_len)
     }
     else if ((CMND_COUNTER == command_code) && (index > 0) && (index <= MAX_COUNTERS)) {
       if ((data_len > 0) && (pin[GPIO_CNTR1 + index -1] < 99)) {
-        RtcSettings.pulse_counter[index -1] = payload16;
-        Settings.pulse_counter[index -1] = payload16;
+        if ((dataBuf[0] == '-') || (dataBuf[0] == '+')) {
+          RtcSettings.pulse_counter[index -1] += payload32;
+          Settings.pulse_counter[index -1] += payload32;
+        } else {
+          RtcSettings.pulse_counter[index -1] = payload32;
+          Settings.pulse_counter[index -1] = payload32;
+        }
       }
       snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_INDEX_LVALUE, command, index, RtcSettings.pulse_counter[index -1]);
     }
@@ -1313,6 +1324,7 @@ void ExecuteCommand(char *cmnd, int source)
   char *start;
   char *token;
 
+  ShowFreeMem(PSTR("ExecuteCommand"));
   ShowSource(source);
 
   token = strtok(cmnd, " ");

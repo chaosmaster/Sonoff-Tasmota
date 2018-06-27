@@ -861,6 +861,9 @@ void GetFeatures()
 #ifdef USE_SDM630
   feature_sns1 |= 0x10000000;  // xsns_25_sdm630.ino
 #endif
+#ifdef USE_LM75AD
+  feature_sns1 |= 0x20000000;  // xsns_26_lm75ad.ino
+#endif
 
 /*********************************************************************************************/
 
@@ -1575,6 +1578,29 @@ String GetUptime()
   return String(dt);
 }
 
+uint32_t GetMinutesUptime()
+{
+  TIME_T ut;
+
+  if (restart_time) {
+    BreakTime(utc_time - restart_time, ut);
+  } else {
+    BreakTime(uptime, ut);
+  }
+
+  return (ut.days *1440) + (ut.hour *60) + ut.minute;
+}
+
+uint32_t GetMinutesPastMidnight()
+{
+  uint32_t minutes = 0;
+
+  if (RtcTime.valid) {
+    minutes = (RtcTime.hour *60) + RtcTime.minute;
+  }
+  return minutes;
+}
+
 void BreakTime(uint32_t time_input, TIME_T &tm)
 {
 // break the given time_input into time components
@@ -1751,11 +1777,10 @@ void RtcSecond()
         GetTime(0).c_str(), GetTime(2).c_str(), GetTime(3).c_str());
       AddLog(LOG_LEVEL_DEBUG);
       if (local_time < 1451602800) {  // 2016-01-01
-        strncpy_P(mqtt_data, PSTR("{\"Time\":{\"Initialized\":1}}"), sizeof(mqtt_data));
+        rules_flag.time_init = 1;
       } else {
-        strncpy_P(mqtt_data, PSTR("{\"Time\":{\"Set\":1}}"), sizeof(mqtt_data));
+        rules_flag.time_set = 1;
       }
-      XdrvRulesProcess();
     } else {
       ntp_sync_minute++;  // Try again in next minute
     }
