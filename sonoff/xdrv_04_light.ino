@@ -1239,7 +1239,7 @@ boolean LightCommand()
           if(light_current_color[0] < 2) light_current_color[0] = 2;
           tuya_hardware_synced = false;
 
-          for (int i=0; i < 2; ++i) { // Send command twice
+          //for (int i=0; i < 2; ++i) { // Send command twice
             Serial.write(0x55); // header 55AA
             Serial.write(0xAA);
             Serial.write(0x00); // version 00
@@ -1256,7 +1256,7 @@ boolean LightCommand()
             Serial.write(light_current_color[0]); // status
             Serial.write((0x115 + light_current_color[0]) % 256); // checksum:sum of all bytes in packet mod 256
             Serial.flush();
-          }
+          //}
         }
         light_update = 1;
         coldim = true;

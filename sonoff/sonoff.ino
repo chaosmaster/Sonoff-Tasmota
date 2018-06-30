@@ -371,7 +371,7 @@ void SetDevicePower(power_t rpower, int source)
       Serial.write((0x115 + tuya_current_dimmer) % 256); // checksum:sum of all bytes in packet mod 256
       */
 
-      for(int i=0; i < 2; ++i) { // Send command twice
+      //for(int i=0; i < 2; ++i) { // Send command twice
         Serial.write(0x55); // header 55AA
         Serial.write(0xAA);
         Serial.write(0x00); // version 00
@@ -386,7 +386,7 @@ void SetDevicePower(power_t rpower, int source)
         Serial.write(0x0D + rpower); // checksum:sum of all bytes in packet mod 256
   
         Serial.flush();
-      }
+      //}
     }
   }
   else if (EXS_RELAY == Settings.module) {
