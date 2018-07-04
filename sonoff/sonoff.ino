@@ -141,7 +141,8 @@ uint8_t backlog_mutex = 0;                  // Command backlog pending
 uint16_t backlog_delay = 0;                 // Command backlog delay
 uint8_t interlock_mutex = 0;                // Interlock power command pending
 uint8_t tuya_cmd_status = 0;                // Tuya protocol status
-uint8_t tuya_current_dimmer = 0;            // Tuya current dimmer;
+uint8_t tuya_current_dimmer = 0;            // Tuya current dimmer
+uint32_t tuya_frequency = 0;                // Tuya mains frequency
 
 #ifdef USE_MQTT_TLS
   WiFiClientSecure EspClient;               // Wifi Secure Client
@@ -1633,7 +1634,7 @@ void ButtonHandler()
           snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_APPLICATION D_BUTTON "%d " D_LEVEL_10), button_index +1);
           AddLog(LOG_LEVEL_DEBUG);
           if (!Settings.flag.button_restrict) {
-            snprintf_P(scmnd, sizeof(scmnd), D_CMND_WIFICONFIG " 2");
+            snprintf_P(scmnd, sizeof(scmnd), D_CMND_WIFICONFIG " %d", 2);
             ExecuteCommand(scmnd, SRC_BUTTON);
           }
         }
@@ -2162,6 +2163,7 @@ void SerialInput()
         case 6:
           if (serial_in_byte == 0x01) tuya_cmd_status = 7;
           else if (serial_in_byte == 0x02) tuya_cmd_status = 8;
+          else if (serial_in_byte == 0x03) tuya_cmd_status = 18;
           else tuya_cmd_status = 0;
           break;
         case 7:
@@ -2173,6 +2175,7 @@ void SerialInput()
         case 14:
         case 15:
         case 16:
+        case 19:
           if (serial_in_byte != 0x00) tuya_cmd_status = 0;
         case 2:
         case 4:
@@ -2205,6 +2208,32 @@ void SerialInput()
           snprintf_P(log_data, sizeof(log_data), "Received Dimmer Status: %d, Settings.light_dimmer %d, serial_in_byte %d", tuya_current_dimmer, Settings.light_dimmer, serial_in_byte);
           AddLog(LOG_LEVEL_DEBUG);
           tuya_cmd_status = 0;
+          break;
+        case 18:
+          if (serial_in_byte != 0x02) tuya_cmd_status = 0;
+          else tuya_cmd_status = 19;
+          break;
+        case 20:
+          if (serial_in_byte != 0x04) tuya_cmd_status = 0;
+          else tuya_cmd_status = 21;
+          break;
+        case 21:
+          tuya_frequency = serial_in_byte << 24;
+          tuya_cmd_status = 22;
+          break;
+        case 22:
+          tuya_frequency |= serial_in_byte << 16;
+          tuya_cmd_status = 23;
+          break;
+        case 23:
+          tuya_frequency |= serial_in_byte << 8;
+          tuya_cmd_status = 24;
+          break;
+        case 24:
+          tuya_frequency |= serial_in_byte;
+          tuya_cmd_status = 0;
+          snprintf_P(log_data, sizeof(log_data), "Received Frequency: %d, %d", tuya_frequency, 16000000000 / tuya_frequency);
+          AddLog(LOG_LEVEL_DEBUG);
           break;
       }
     }
