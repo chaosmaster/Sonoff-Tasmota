@@ -153,14 +153,6 @@ boolean XdrvCommand(uint8_t grpflg, char *type, uint16_t index, char *dataBuf, u
   return XdrvCall(FUNC_COMMAND);
 }
 
-void XdrvSetPower(power_t mpower)
-{
-//  XdrvMailbox.valid = 1;
-  XdrvMailbox.index = mpower;
-
-  XdrvCall(FUNC_SET_POWER);
-}
-
 boolean XdrvMqttData(char *topicBuf, uint16_t stopicBuf, char *dataBuf, uint16_t sdataBuf)
 {
   XdrvMailbox.index = stopicBuf;
@@ -198,6 +190,8 @@ void ShowFreeMem(const char *where)
  * FUNC_SHOW_SENSOR
  * FUNC_EVERY_SECOND
  * FUNC_EVERY_50_MSECOND
+ * FUNC_EVERY_100_MSECOND
+ * FUNC_EVERY_250_MSECOND
  * FUNC_RULES_PROCESS
  * FUNC_FREE_MEM
 \*********************************************************************************************/

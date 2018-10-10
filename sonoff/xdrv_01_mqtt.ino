@@ -23,19 +23,32 @@
 // Default MQTT driver for both non-TLS and TLS connections. Blocks network if MQTT server is unavailable.
 //#define MQTT_LIBRARY_TYPE      MQTT_PUBSUBCLIENT   // Use PubSubClient library
 // Alternative MQTT driver does not block network when MQTT server is unavailable. No TLS support
-//#define MQTT_LIBRARY_TYPE      MQTT_TASMOTAMQTT    // Use TasmotaMqtt library (+4k4 code, +4k mem) - non-TLS only
-// Alternative MQTT driver does not block network when MQTT server is unavailable. No TLS support
-//#define MQTT_LIBRARY_TYPE      MQTT_ESPMQTTARDUINO // Use (patched) esp-mqtt-arduino library (+4k8 code, +4k mem) - non-TLS only
+//#define MQTT_LIBRARY_TYPE      MQTT_TASMOTAMQTT    // Use TasmotaMqtt library (+4k4 (core 2.3.0), +14k4 (core 2.4.2 lwip2) code, +4k mem) - non-TLS only
+// Alternative MQTT driver does not block network when MQTT server is unavailable. TLS should work but needs to be tested.
+//#define MQTT_LIBRARY_TYPE      MQTT_ARDUINOMQTT    // Use arduino-mqtt (lwmqtt) library (+3k3 code, +2k mem)
+
+#if (MQTT_LIBRARY_TYPE == MQTT_ESPMQTTARDUINO)     // Obsolete as of v6.2.1.11
+#undef MQTT_LIBRARY_TYPE
+#define MQTT_LIBRARY_TYPE      MQTT_ARDUINOMQTT
+#endif
+
+/*
+#if (MQTT_LIBRARY_TYPE == MQTT_TASMOTAMQTT)
+#undef MQTT_LIBRARY_TYPE
+#define MQTT_LIBRARY_TYPE      MQTT_ARDUINOMQTT    // Obsolete in near future
+#endif
+*/
 
 #ifdef USE_MQTT_TLS
-#ifdef MQTT_LIBRARY_TYPE
+
+#if (MQTT_LIBRARY_TYPE == MQTT_TASMOTAMQTT)
 #undef MQTT_LIBRARY_TYPE
 #endif
-#define MQTT_LIBRARY_TYPE      MQTT_PUBSUBCLIENT   // Use PubSubClient library as it only supports TLS
-#else
+
 #ifndef MQTT_LIBRARY_TYPE
-#define MQTT_LIBRARY_TYPE      MQTT_PUBSUBCLIENT   // Use PubSubClient library as default
+#define MQTT_LIBRARY_TYPE      MQTT_PUBSUBCLIENT   // Use PubSubClient library as it only supports TLS
 #endif
+
 #endif
 
 /*********************************************************************************************/
@@ -92,7 +105,9 @@ void MqttSubscribeLib(char *topic)
 
 bool MqttPublishLib(const char* topic, boolean retained)
 {
-  return MqttClient.publish(topic, mqtt_data, retained);
+  bool result = MqttClient.publish(topic, mqtt_data, retained);
+  yield();  // #3313
+  return result;
 }
 
 void MqttLoop()
@@ -107,7 +122,7 @@ TasmotaMqtt MqttClient;
 
 bool MqttIsConnected()
 {
-  return mqtt_connected;
+  return MqttClient.Connected();
 }
 
 void MqttDisconnect()
@@ -134,48 +149,48 @@ void MqttLoop()
 {
 }
 
-#elif (MQTT_LIBRARY_TYPE == MQTT_ESPMQTTARDUINO)  /*******************************************/
+#elif (MQTT_LIBRARY_TYPE == MQTT_ARDUINOMQTT)  /**********************************************/
 
-#include <MQTT.h>
-MQTT *MqttClient = NULL;
+#include <MQTTClient.h>
+MQTTClient MqttClient(MQTT_MAX_PACKET_SIZE);
 
 bool MqttIsConnected()
 {
-  return mqtt_connected;
+  return MqttClient.connected();
 }
 
 void MqttDisconnect()
 {
-  if (MqttClient) MqttClient->disconnect();
+  MqttClient.disconnect();
 }
 
-void MqttDisconnectedCb()
+/*
+void MqttMyDataCb(MQTTClient* client, char* topic, char* data, int data_len)
+//void MqttMyDataCb(MQTTClient *client, char topic[], char data[], int data_len)
 {
-  MqttDisconnected(MqttClient->getState());  // status codes are documented in file mqtt.h as tConnState
+//  MqttDataHandler((char*)topic, (byte*)data, data_len);
 }
+*/
 
-void MqttMyDataCb(const char* topic, uint32_t topic_len, const char* data, uint32_t data_len)
+void MqttMyDataCb(String &topic, String &data)
 {
-	char topic_copy[topic_len +1];
-
-	memcpy(topic_copy, topic, topic_len);
-	topic_copy[topic_len] = 0;
-  if (0 == data_len) data = (const char*)&topic_copy + topic_len;
-  MqttDataHandler((char*)topic_copy, (byte*)data, data_len);
+  MqttDataHandler((char*)topic.c_str(), (byte*)data.c_str(), data.length());
 }
 
 void MqttSubscribeLib(char *topic)
 {
-  MqttClient->subscribe(topic);
+  MqttClient.subscribe(topic, 0);
 }
 
 bool MqttPublishLib(const char* topic, boolean retained)
 {
-  return MqttClient->publish(topic, mqtt_data, strlen(mqtt_data), 0, retained);
+  return MqttClient.publish(topic, mqtt_data, strlen(mqtt_data), retained, 0);
 }
 
 void MqttLoop()
 {
+  MqttClient.loop();
+//  delay(10);
 }
 
 #endif  // MQTT_LIBRARY_TYPE
@@ -240,7 +255,7 @@ void MqttPublish(const char* topic, boolean retained)
   if (!strcmp(Settings.mqtt_prefix[0],Settings.mqtt_prefix[1])) {
     me = strstr(topic,Settings.mqtt_prefix[0]);
     if (me == topic) {
-      mqtt_cmnd_publish += 8;
+      mqtt_cmnd_publish += 3;
     }
   }
   MqttPublishDirect(topic, retained);
@@ -283,15 +298,24 @@ void MqttPublishPowerState(byte device)
   char scommand[33];
 
   if ((device < 1) || (device > devices_present)) { device = 1; }
-  GetPowerDevice(scommand, device, sizeof(scommand), Settings.flag.device_index_enable);
 
-  GetTopic_P(stopic, STAT, mqtt_topic, (Settings.flag.mqtt_response) ? scommand : S_RSLT_RESULT);
-  snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, scommand, GetStateText(bitRead(power, device -1)));
-  MqttPublish(stopic);
+  if ((SONOFF_IFAN02 == Settings.module) && (device > 1)) {
+    if (GetFanspeed() < 4) {  // 4 occurs when fanspeed is 3 and RC button 2 is pressed
+      snprintf_P(scommand, sizeof(scommand), PSTR(D_CMND_FANSPEED));
+      GetTopic_P(stopic, STAT, mqtt_topic, (Settings.flag.mqtt_response) ? scommand : S_RSLT_RESULT);
+      snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_NVALUE, scommand, GetFanspeed());
+      MqttPublish(stopic);
+    }
+  } else {
+    GetPowerDevice(scommand, device, sizeof(scommand), Settings.flag.device_index_enable);
+    GetTopic_P(stopic, STAT, mqtt_topic, (Settings.flag.mqtt_response) ? scommand : S_RSLT_RESULT);
+    snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, scommand, GetStateText(bitRead(power, device -1)));
+    MqttPublish(stopic);
 
-  GetTopic_P(stopic, STAT, mqtt_topic, scommand);
-  snprintf_P(mqtt_data, sizeof(mqtt_data), GetStateText(bitRead(power, device -1)));
-  MqttPublish(stopic, Settings.flag.mqtt_power_retain);
+    GetTopic_P(stopic, STAT, mqtt_topic, scommand);
+    snprintf_P(mqtt_data, sizeof(mqtt_data), GetStateText(bitRead(power, device -1)));
+    MqttPublish(stopic, Settings.flag.mqtt_power_retain);
+  }
 }
 
 void MqttPublishPowerBlinkState(byte device)
@@ -365,15 +389,17 @@ void MqttConnected()
     snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"" D_JSON_RESTARTREASON "\":\"%s\"}"),
       (GetResetReason() == "Exception") ? ESP.getResetInfo().c_str() : GetResetReason().c_str());
     MqttPublishPrefixTopic_P(TELE, PSTR(D_RSLT_INFO "3"));
-    if (Settings.tele_period) {
-      tele_period = Settings.tele_period -9;
+    for (byte i = 1; i <= devices_present; i++) {
+      MqttPublishPowerState(i);
+      if (SONOFF_IFAN02 == Settings.module) { break; }  // Only report status of light relay
     }
-    status_update_timer = 2;
+    if (Settings.tele_period) { tele_period = Settings.tele_period -9; }  // Enable TelePeriod in 9 seconds
     rules_flag.system_boot = 1;
     XdrvCall(FUNC_MQTT_INIT);
   }
   mqtt_initial_connection_state = 0;
   rules_flag.mqtt_connected = 1;
+  global_state.mqtt_down = 0;
 }
 
 #ifdef USE_MQTT_TLS
@@ -434,6 +460,7 @@ void MqttReconnect()
 
   mqtt_connected = false;
   mqtt_retry_counter = Settings.mqtt_retry;
+  global_state.mqtt_down = 1;
 
 #ifndef USE_MQTT_TLS
 #ifdef USE_DISCOVERY
@@ -453,6 +480,14 @@ void MqttReconnect()
   GetTopic_P(stopic, TELE, mqtt_topic, S_LWT);
   snprintf_P(mqtt_data, sizeof(mqtt_data), S_OFFLINE);
 
+//#ifdef ARDUINO_ESP8266_RELEASE_2_4_1
+#ifdef USE_MQTT_TLS
+  EspClient = WiFiClientSecure();         // Wifi Secure Client reconnect issue 4497 (https://github.com/esp8266/Arduino/issues/4497)
+#else
+  EspClient = WiFiClient();               // Wifi Client reconnect issue 4497 (https://github.com/esp8266/Arduino/issues/4497)
+#endif
+//#endif
+
   if (2 == mqtt_initial_connection_state) {  // Executed once just after power on and wifi is connected
 #ifdef USE_MQTT_TLS
     if (!MqttCheckTls()) return;
@@ -465,24 +500,16 @@ void MqttReconnect()
     MqttClient.OnConnected(MqttConnected);
     MqttClient.OnDisconnected(MqttDisconnectedCb);
     MqttClient.OnData(MqttDataHandler);
-#elif (MQTT_LIBRARY_TYPE == MQTT_ESPMQTTARDUINO)
-    MqttClient = new MQTT(mqtt_client, Settings.mqtt_host, Settings.mqtt_port, stopic, 1, true, mqtt_data);
-    MqttClient->setUserPwd(mqtt_user, mqtt_pwd);
-    MqttClient->onConnected(MqttConnected);
-    MqttClient->onDisconnected(MqttDisconnectedCb);
-    MqttClient->onData(MqttMyDataCb);
+#elif (MQTT_LIBRARY_TYPE == MQTT_ARDUINOMQTT)
+    MqttClient.begin(Settings.mqtt_host, Settings.mqtt_port, EspClient);
+    MqttClient.setWill(stopic, mqtt_data, true, 1);
+    MqttClient.setOptions(MQTT_KEEPALIVE, true, MQTT_TIMEOUT);
+//    MqttClient.onMessageAdvanced(MqttMyDataCb);
+    MqttClient.onMessage(MqttMyDataCb);
 #endif
 
     mqtt_initial_connection_state = 1;
   }
-
-//#ifdef ARDUINO_ESP8266_RELEASE_2_4_1
-#ifdef USE_MQTT_TLS
-  EspClient = WiFiClientSecure();         // Wifi Secure Client reconnect issue 4497 (https://github.com/esp8266/Arduino/issues/4497)
-#else
-  EspClient = WiFiClient();               // Wifi Client reconnect issue 4497 (https://github.com/esp8266/Arduino/issues/4497)
-#endif
-//#endif
 
 #if (MQTT_LIBRARY_TYPE == MQTT_PUBSUBCLIENT)
   MqttClient.setCallback(MqttDataHandler);
@@ -494,8 +521,12 @@ void MqttReconnect()
   }
 #elif (MQTT_LIBRARY_TYPE == MQTT_TASMOTAMQTT)
   MqttClient.Connect();
-#elif (MQTT_LIBRARY_TYPE == MQTT_ESPMQTTARDUINO)
-  MqttClient->connect();
+#elif (MQTT_LIBRARY_TYPE == MQTT_ARDUINOMQTT)
+  if (MqttClient.connect(mqtt_client, mqtt_user, mqtt_pwd)) {
+    MqttConnected();
+  } else {
+    MqttDisconnected(MqttClient.lastError());  // status codes are documented here https://github.com/256dpi/lwmqtt/blob/master/include/lwmqtt.h#L11
+  }
 #endif  // MQTT_LIBRARY_TYPE
 }
 
@@ -503,13 +534,17 @@ void MqttCheck()
 {
   if (Settings.flag.mqtt_enabled) {
     if (!MqttIsConnected()) {
+      global_state.mqtt_down = 1;
       if (!mqtt_retry_counter) {
         MqttReconnect();
       } else {
         mqtt_retry_counter--;
       }
+    } else {
+      global_state.mqtt_down = 0;
     }
   } else {
+    global_state.mqtt_down = 0;
     if (mqtt_initial_connection_state) MqttReconnect();
   }
 }
@@ -538,7 +573,7 @@ bool MqttCommand()
   }
   else if (CMND_MQTTHOST == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_host))) {
-      strlcpy(Settings.mqtt_host, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? MQTT_HOST : dataBuf, sizeof(Settings.mqtt_host));
+      strlcpy(Settings.mqtt_host, (SC_CLEAR == Shortcut(dataBuf)) ? "" : (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_HOST : dataBuf, sizeof(Settings.mqtt_host));
       restart_flag = 2;
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.mqtt_host);
@@ -570,14 +605,13 @@ bool MqttCommand()
   else if ((CMND_MQTTFINGERPRINT == command_code) && (index > 0) && (index <= 2)) {
     char fingerprint[60];
     if ((data_len > 0) && (data_len < sizeof(fingerprint))) {
-      strlcpy(fingerprint, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? (1 == index) ? MQTT_FINGERPRINT1 : MQTT_FINGERPRINT2 : dataBuf, sizeof(fingerprint));
+      strlcpy(fingerprint, (SC_CLEAR == Shortcut(dataBuf)) ? "" : (SC_DEFAULT == Shortcut(dataBuf)) ? (1 == index) ? MQTT_FINGERPRINT1 : MQTT_FINGERPRINT2 : dataBuf, sizeof(fingerprint));
       char *p = fingerprint;
       for (byte i = 0; i < 20; i++) {
         Settings.mqtt_fingerprint[index -1][i] = strtol(p, &p, 16);
       }
       restart_flag = 2;
     }
-
     fingerprint[0] = '\0';
     for (byte i = 0; i < sizeof(Settings.mqtt_fingerprint[index -1]); i++) {
       snprintf_P(fingerprint, sizeof(fingerprint), PSTR("%s%s%02X"), fingerprint, (i) ? " " : "", Settings.mqtt_fingerprint[index -1][i]);
@@ -587,21 +621,21 @@ bool MqttCommand()
 #endif
   else if ((CMND_MQTTCLIENT == command_code) && !grpflg) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_client))) {
-      strlcpy(Settings.mqtt_client, (1 == payload) ? MQTT_CLIENT_ID : dataBuf, sizeof(Settings.mqtt_client));
+      strlcpy(Settings.mqtt_client, (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_CLIENT_ID : dataBuf, sizeof(Settings.mqtt_client));
       restart_flag = 2;
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.mqtt_client);
   }
   else if (CMND_MQTTUSER == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_user))) {
-      strlcpy(Settings.mqtt_user, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? MQTT_USER : dataBuf, sizeof(Settings.mqtt_user));
+      strlcpy(Settings.mqtt_user, (SC_CLEAR == Shortcut(dataBuf)) ? "" : (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_USER : dataBuf, sizeof(Settings.mqtt_user));
       restart_flag = 2;
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.mqtt_user);
   }
   else if (CMND_MQTTPASSWORD == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_pwd))) {
-      strlcpy(Settings.mqtt_pwd, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? MQTT_PASS : dataBuf, sizeof(Settings.mqtt_pwd));
+      strlcpy(Settings.mqtt_pwd, (SC_CLEAR == Shortcut(dataBuf)) ? "" : (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_PASS : dataBuf, sizeof(Settings.mqtt_pwd));
       snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.mqtt_pwd);
       restart_flag = 2;
     } else {
@@ -611,8 +645,8 @@ bool MqttCommand()
   else if (CMND_FULLTOPIC == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_fulltopic))) {
       MakeValidMqtt(1, dataBuf);
-      if (!strcmp(dataBuf, mqtt_client)) payload = 1;
-      strlcpy(stemp1, (1 == payload) ? MQTT_FULLTOPIC : dataBuf, sizeof(stemp1));
+      if (!strcmp(dataBuf, mqtt_client)) SetShortcut(dataBuf, SC_DEFAULT);
+      strlcpy(stemp1, (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_FULLTOPIC : dataBuf, sizeof(stemp1));
       if (strcmp(stemp1, Settings.mqtt_fulltopic)) {
         snprintf_P(mqtt_data, sizeof(mqtt_data), (Settings.flag.mqtt_offline) ? S_OFFLINE : "");
         MqttPublishPrefixTopic_P(TELE, PSTR(D_LWT), true);  // Offline or remove previous retained topic
@@ -625,7 +659,7 @@ bool MqttCommand()
   else if ((CMND_PREFIX == command_code) && (index > 0) && (index <= 3)) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_prefix[0]))) {
       MakeValidMqtt(0, dataBuf);
-      strlcpy(Settings.mqtt_prefix[index -1], (1 == payload) ? (1==index)?SUB_PREFIX:(2==index)?PUB_PREFIX:PUB_PREFIX2 : dataBuf, sizeof(Settings.mqtt_prefix[0]));
+      strlcpy(Settings.mqtt_prefix[index -1], (SC_DEFAULT == Shortcut(dataBuf)) ? (1==index)?SUB_PREFIX:(2==index)?PUB_PREFIX:PUB_PREFIX2 : dataBuf, sizeof(Settings.mqtt_prefix[0]));
 //      if (Settings.mqtt_prefix[index -1][strlen(Settings.mqtt_prefix[index -1])] == '/') Settings.mqtt_prefix[index -1][strlen(Settings.mqtt_prefix[index -1])] = 0;
       restart_flag = 2;
     }
@@ -642,7 +676,7 @@ bool MqttCommand()
         } else {
           mqtt_data[0] = '\0';
         }
-        MqttPublishDirect(stemp1, false);
+        MqttPublishDirect(stemp1, (index == 2));
 //        snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, D_JSON_DONE);
         mqtt_data[0] = '\0';
       }
@@ -651,8 +685,8 @@ bool MqttCommand()
   else if (CMND_GROUPTOPIC == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_grptopic))) {
       MakeValidMqtt(0, dataBuf);
-      if (!strcmp(dataBuf, mqtt_client)) payload = 1;
-      strlcpy(Settings.mqtt_grptopic, (1 == payload) ? MQTT_GRPTOPIC : dataBuf, sizeof(Settings.mqtt_grptopic));
+      if (!strcmp(dataBuf, mqtt_client)) SetShortcut(dataBuf, SC_DEFAULT);
+      strlcpy(Settings.mqtt_grptopic, (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_GRPTOPIC : dataBuf, sizeof(Settings.mqtt_grptopic));
       restart_flag = 2;
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.mqtt_grptopic);
@@ -660,8 +694,8 @@ bool MqttCommand()
   else if ((CMND_TOPIC == command_code) && !grpflg) {
     if ((data_len > 0) && (data_len < sizeof(Settings.mqtt_topic))) {
       MakeValidMqtt(0, dataBuf);
-      if (!strcmp(dataBuf, mqtt_client)) payload = 1;
-      strlcpy(stemp1, (1 == payload) ? MQTT_TOPIC : dataBuf, sizeof(stemp1));
+      if (!strcmp(dataBuf, mqtt_client)) SetShortcut(dataBuf, SC_DEFAULT);
+      strlcpy(stemp1, (SC_DEFAULT == Shortcut(dataBuf)) ? MQTT_TOPIC : dataBuf, sizeof(stemp1));
       if (strcmp(stemp1, Settings.mqtt_topic)) {
         snprintf_P(mqtt_data, sizeof(mqtt_data), (Settings.flag.mqtt_offline) ? S_OFFLINE : "");
         MqttPublishPrefixTopic_P(TELE, PSTR(D_LWT), true);  // Offline or remove previous retained topic
@@ -674,22 +708,31 @@ bool MqttCommand()
   else if ((CMND_BUTTONTOPIC == command_code) && !grpflg) {
     if ((data_len > 0) && (data_len < sizeof(Settings.button_topic))) {
       MakeValidMqtt(0, dataBuf);
-      if (!strcmp(dataBuf, mqtt_client)) payload = 1;
-      strlcpy(Settings.button_topic, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? mqtt_topic : dataBuf, sizeof(Settings.button_topic));
+      if (!strcmp(dataBuf, mqtt_client)) SetShortcut(dataBuf, SC_DEFAULT);
+      switch (Shortcut(dataBuf)) {
+        case SC_CLEAR: strlcpy(Settings.button_topic, "", sizeof(Settings.button_topic)); break;
+        case SC_DEFAULT: strlcpy(Settings.button_topic, mqtt_topic, sizeof(Settings.button_topic)); break;
+        case SC_USER: strlcpy(Settings.button_topic, MQTT_BUTTON_TOPIC, sizeof(Settings.button_topic)); break;
+        default: strlcpy(Settings.button_topic, dataBuf, sizeof(Settings.button_topic));
+      }
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.button_topic);
   }
   else if (CMND_SWITCHTOPIC == command_code) {
     if ((data_len > 0) && (data_len < sizeof(Settings.switch_topic))) {
       MakeValidMqtt(0, dataBuf);
-      if (!strcmp(dataBuf, mqtt_client)) payload = 1;
-      strlcpy(Settings.switch_topic, (!strcmp(dataBuf,"0")) ? "" : (1 == payload) ? mqtt_topic : dataBuf, sizeof(Settings.switch_topic));
+      if (!strcmp(dataBuf, mqtt_client)) SetShortcut(dataBuf, SC_DEFAULT);
+      switch (Shortcut(dataBuf)) {
+        case SC_CLEAR: strlcpy(Settings.switch_topic, "", sizeof(Settings.switch_topic)); break;
+        case SC_DEFAULT: strlcpy(Settings.switch_topic, mqtt_topic, sizeof(Settings.switch_topic)); break;
+        case SC_USER: strlcpy(Settings.switch_topic, MQTT_SWITCH_TOPIC, sizeof(Settings.switch_topic)); break;
+        default: strlcpy(Settings.switch_topic, dataBuf, sizeof(Settings.switch_topic));
+      }
     }
     snprintf_P(mqtt_data, sizeof(mqtt_data), S_JSON_COMMAND_SVALUE, command, Settings.switch_topic);
   }
   else if (CMND_BUTTONRETAIN == command_code) {
     if ((payload >= 0) && (payload <= 1)) {
-      strlcpy(Settings.button_topic, mqtt_topic, sizeof(Settings.button_topic));
       if (!payload) {
         for(i = 1; i <= MAX_KEYS; i++) {
           SendKey(0, i, 9);  // Clear MQTT retain in broker
@@ -701,7 +744,6 @@ bool MqttCommand()
   }
   else if (CMND_SWITCHRETAIN == command_code) {
     if ((payload >= 0) && (payload <= 1)) {
-      strlcpy(Settings.button_topic, mqtt_topic, sizeof(Settings.button_topic));
       if (!payload) {
         for(i = 1; i <= MAX_SWITCHES; i++) {
           SendKey(1, i, 9);  // Clear MQTT retain in broker

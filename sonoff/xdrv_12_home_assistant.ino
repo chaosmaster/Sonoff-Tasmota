@@ -19,7 +19,7 @@
 
 #ifdef USE_HOME_ASSISTANT
 
-const char HASS_DISCOVER_SWITCH[] PROGMEM =
+const char HASS_DISCOVER_RELAY[] PROGMEM =
   "{\"name\":\"%s\","                              // dualr2 1
   "\"command_topic\":\"%s\","                      // cmnd/dualr2/POWER2
   "\"state_topic\":\"%s\","                        // stat/dualr2/RESULT  (implies "\"optimistic\":\"false\",")
@@ -39,7 +39,8 @@ const char HASS_DISCOVER_BUTTON[] PROGMEM =
 //  "\"optimistic\":\"false\","                    // false is Hass default when state_topic is set
   "\"availability_topic\":\"%s\","                 // tele/dualr2/LWT
   "\"payload_available\":\"" D_ONLINE "\","        // Online
-  "\"payload_not_available\":\"" D_OFFLINE "\"";   // Offline
+  "\"payload_not_available\":\"" D_OFFLINE "\","   // Offline
+  "\"force_update\":true";
 
 const char HASS_DISCOVER_LIGHT_DIMMER[] PROGMEM =
   "%s,\"brightness_command_topic\":\"%s\","        // cmnd/led2/Dimmer
@@ -49,7 +50,7 @@ const char HASS_DISCOVER_LIGHT_DIMMER[] PROGMEM =
   "\"brightness_value_template\":\"{{value_json." D_CMND_DIMMER "}}\"";
 
 const char HASS_DISCOVER_LIGHT_COLOR[] PROGMEM =
-  "%s,\"rgb_command_topic\":\"%s\","               // cmnd/led2/Color
+  "%s,\"rgb_command_topic\":\"%s2\","              // cmnd/led2/Color2
   "\"rgb_state_topic\":\"%s\","                    // stat/led2/RESULT
   "\"rgb_value_template\":\"{{value_json." D_CMND_COLOR "}}\"";
 //  "\"rgb_value_template\":\"{{value_json." D_CMND_COLOR " | join(',')}}\"";
@@ -71,18 +72,20 @@ void HAssDiscoverRelay()
   char sidx[8];
   char stopic[TOPSZ];
   bool is_light = false;
+  bool is_topic_light = false;
 
   for (int i = 1; i <= MAX_RELAYS; i++) {
     is_light = ((i == devices_present) && (light_type));
+    is_topic_light = Settings.flag.hass_light || is_light;
 
     mqtt_data[0] = '\0';  // Clear retained message
 
     snprintf_P(sidx, sizeof(sidx), PSTR("_%d"), i);
     // Clear "other" topic first in case the device has been reconfigured
-    snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s%s/config"), (is_light) ? "switch" : "light", mqtt_topic, sidx);
+    snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s%s/config"), (is_topic_light) ? "switch" : "light", mqtt_topic, sidx);
     MqttPublish(stopic, true);
     // Clear or Set topic
-    snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s%s/config"), (is_light) ? "light" : "switch", mqtt_topic, sidx);
+    snprintf_P(stopic, sizeof(stopic), PSTR(HOME_ASSISTANT_DISCOVERY_PREFIX "/%s/%s%s/config"), (is_topic_light) ? "light" : "switch", mqtt_topic, sidx);
 
     if (Settings.flag.hass_discovery && (i <= devices_present)) {
       char name[33];
@@ -100,7 +103,7 @@ void HAssDiscoverRelay()
       GetTopic_P(command_topic, CMND, mqtt_topic, value_template);
       GetTopic_P(state_topic, STAT, mqtt_topic, S_RSLT_RESULT);
       GetTopic_P(availability_topic, TELE, mqtt_topic, S_LWT);
-      snprintf_P(mqtt_data, sizeof(mqtt_data), HASS_DISCOVER_SWITCH, name, command_topic, state_topic, value_template, Settings.state_text[0], Settings.state_text[1], availability_topic);
+      snprintf_P(mqtt_data, sizeof(mqtt_data), HASS_DISCOVER_RELAY, name, command_topic, state_topic, value_template, Settings.state_text[0], Settings.state_text[1], availability_topic);
 
       if (is_light) {
         char brightness_command_topic[TOPSZ];
@@ -204,6 +207,50 @@ void HAssDiscovery(uint8_t mode)
   }
 }
 
+/*
+#define D_CMND_HASSDISCOVER "HassDiscover"
+
+enum HassCommands { CMND_HASSDISCOVER };
+const char kHassCommands[] PROGMEM = D_CMND_HASSDISCOVER ;
+
+boolean HassCommand()
+{
+  char command[CMDSZ];
+  boolean serviced = true;
+
+  int command_code = GetCommandCode(command, sizeof(command), XdrvMailbox.topic, kHassCommands);
+  if (-1 == command_code) {
+    serviced = false;  // Unknown command
+  }
+  else if (CMND_HASSDISCOVER == command_code) {
+    if (XdrvMailbox.data_len > 0) {
+      switch (XdrvMailbox.payload) {
+      case 0: // Off
+      case 1: // On
+        Settings.flag.hass_discovery = XdrvMailbox.payload;
+        break;
+      case 2: // Toggle
+        Settings.flag.hass_discovery ^= 1;
+        break;
+      case 4: // Off
+      case 5: // On
+        Settings.flag.hass_light = XdrvMailbox.payload &1;
+        break;
+      case 6: // Toggle
+        Settings.flag.hass_light ^= 1;
+        break;
+      }
+      HAssDiscovery(1);
+    }
+    snprintf_P (mqtt_data, sizeof(mqtt_data), PSTR("{\"%s\":\"%s\",\"Force light\":\"%s\"}"),
+      command, GetStateText(Settings.flag.hass_discovery), GetStateText(Settings.flag.hass_light));
+  }
+  else serviced = false;  // Unknown command
+
+  return serviced;
+}
+*/
+
 /*********************************************************************************************\
  * Interface
 \*********************************************************************************************/
@@ -219,6 +266,11 @@ boolean Xdrv12(byte function)
       case FUNC_MQTT_INIT:
         HAssDiscovery(0);
         break;
+/*
+      case FUNC_COMMAND:
+        result = HassCommand();
+        break;
+*/
     }
   }
   return result;

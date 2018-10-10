@@ -151,13 +151,22 @@ void DomoticzMqttSubscribe()
    "switchType" : "Dimmer",
    "unit" : 1
 }
+ * Fail on this one
+{
+   "LastUpdate" : "2018-10-02 20:39:45",
+   "Name" : "Sfeerverlichting",
+   "Status" : "Off",
+   "Timers" : "true",
+   "Type" : "Group",
+   "idx" : "2"
+}
 */
 
 boolean DomoticzMqttData()
 {
   char stemp1[10];
   unsigned long idx = 0;
-  int16_t nvalue;
+  int16_t nvalue = -1;
   int16_t found = 0;
 
   domoticz_update_flag = 1;
@@ -174,25 +183,44 @@ boolean DomoticzMqttData()
 //      return 1;
 //    }
     idx = domoticz["idx"];
-    nvalue = domoticz["nvalue"];
+    if (domoticz.containsKey("nvalue")) {
+      nvalue = domoticz["nvalue"];
+    }
 
     snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_DOMOTICZ "idx %d, nvalue %d"), idx, nvalue);
     AddLog(LOG_LEVEL_DEBUG_MORE);
 
-    if ((idx > 0) && (nvalue >= 0) && (nvalue <= 2)) {
+    if ((idx > 0) && (nvalue >= 0) && (nvalue <= 15)) {
       uint8_t maxdev = (devices_present > MAX_DOMOTICZ_IDX) ? MAX_DOMOTICZ_IDX : devices_present;
       for (byte i = 0; i < maxdev; i++) {
         if (idx == Settings.domoticz_relay_idx[i]) {
+          bool iscolordimmer = strcmp_P(domoticz["dtype"],PSTR("Color Switch")) == 0;
           snprintf_P(stemp1, sizeof(stemp1), PSTR("%d"), i +1);
-          if (2 == nvalue) {
-            nvalue = domoticz["svalue1"];
+          if (iscolordimmer && 10 == nvalue) { // Color_SetColor
+            JsonObject& color = domoticz["Color"];
+            uint16_t level = nvalue = domoticz["svalue1"];
+            uint16_t r = color["r"]; r = r * level / 100;
+            uint16_t g = color["g"]; g = g * level / 100;
+            uint16_t b = color["b"]; b = b * level / 100;
+            uint16_t cw = color["cw"]; cw = cw * level / 100;
+            uint16_t ww = color["ww"]; ww = ww * level / 100;
+            snprintf_P(XdrvMailbox.topic, XdrvMailbox.index, PSTR("/" D_CMND_COLOR));
+            snprintf_P(XdrvMailbox.data, XdrvMailbox.data_len, PSTR("%02x%02x%02x%02x%02x"), r, g, b, cw, ww);
+            found = 1;
+          } else if ((!iscolordimmer && 2 == nvalue) || // gswitch_sSetLevel
+                     (iscolordimmer && 15 == nvalue)) { // Color_SetBrightnessLevel
+            if (domoticz.containsKey("svalue1")) {
+              nvalue = domoticz["svalue1"];
+            } else {
+              return 1;
+            }
             if (light_type && (Settings.light_dimmer == nvalue) && ((power >> i) &1)) {
               return 1;
             }
             snprintf_P(XdrvMailbox.topic, XdrvMailbox.index, PSTR("/" D_CMND_DIMMER));
             snprintf_P(XdrvMailbox.data, XdrvMailbox.data_len, PSTR("%d"), nvalue);
             found = 1;
-          } else {
+          } else if (1 == nvalue || 0 == nvalue) {
             if (((power >> i) &1) == (power_t)nvalue) {
               return 1;
             }
@@ -271,14 +299,17 @@ boolean DomoticzCommand()
 
 boolean DomoticzSendKey(byte key, byte device, byte state, byte svalflg)
 {
-  if ((Settings.domoticz_key_idx[device -1] || Settings.domoticz_switch_idx[device -1]) && (svalflg)) {
-    snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"command\":\"switchlight\",\"idx\":%d,\"switchcmd\":\"%s\"}"),
-      (key) ? Settings.domoticz_switch_idx[device -1] : Settings.domoticz_key_idx[device -1], (state) ? (2 == state) ? "Toggle" : "On" : "Off");
-    MqttPublish(domoticz_in_topic);
-    return 1;
-  } else {
-    return 0;
+  boolean result = 0;
+
+  if (device <= MAX_DOMOTICZ_IDX) {
+    if ((Settings.domoticz_key_idx[device -1] || Settings.domoticz_switch_idx[device -1]) && (svalflg)) {
+      snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"command\":\"switchlight\",\"idx\":%d,\"switchcmd\":\"%s\"}"),
+        (key) ? Settings.domoticz_switch_idx[device -1] : Settings.domoticz_key_idx[device -1], (state) ? (2 == state) ? "Toggle" : "On" : "Off");
+      MqttPublish(domoticz_in_topic);
+      result = 1;
+    }
   }
+  return result;
 }
 
 /*********************************************************************************************\
@@ -343,7 +374,7 @@ void DomoticzTempHumPressureSensor(char *temp, char *hum, char *baro)
   DomoticzSensor(DZ_TEMP_HUM_BARO, data);
 }
 
-void DomoticzSensorPowerEnergy(uint16_t power, char *energy)
+void DomoticzSensorPowerEnergy(int power, char *energy)
 {
   char data[16];
   snprintf_P(data, sizeof(data), PSTR("%d;%s"), power, energy);
@@ -359,10 +390,8 @@ const char S_CONFIGURE_DOMOTICZ[] PROGMEM = D_CONFIGURE_DOMOTICZ;
 
 void HandleDomoticzConfiguration()
 {
-  if (HTTP_USER == webserver_state) {
-    HandleRoot();
-    return;
-  }
+  if (HttpUser()) { return; }
+  if (!WebAuthenticate()) { return WebServer->requestAuthentication(); }
   AddLog_P(LOG_LEVEL_DEBUG, S_LOG_HTTP, S_CONFIGURE_DOMOTICZ);
 
   char stemp[32];

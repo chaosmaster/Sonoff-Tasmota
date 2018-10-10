@@ -60,10 +60,12 @@
 #define D_BLINKOFF "闪烁关"
 #define D_BOOT_COUNT "启动次数"
 #define D_BRIGHTLIGHT "亮"
+#define D_BSSID "BSSId"
 #define D_BUTTON "按钮"
 #define D_BY "汉化: killadm 作者:"                    // Written by me
 #define D_BYTES "大小:"
 #define D_CELSIUS "摄氏"
+#define D_CHANNEL "Channel"
 #define D_CO2 "二氧化碳"
 #define D_CODE "代码"                // Button code
 #define D_COLDLIGHT "冷"
@@ -161,9 +163,18 @@
 #define D_USER "用户名"
 #define D_UTC_TIME "UTC"
 #define D_UV_INDEX "紫外线指数"
+#define D_UV_INDEX_1 "Low"
+#define D_UV_INDEX_2 "Mid"
+#define D_UV_INDEX_3 "High"
+#define D_UV_INDEX_4 "Danger"
+#define D_UV_INDEX_5 "BurnL1/2"
+#define D_UV_INDEX_6 "BurnL3"
+#define D_UV_INDEX_7 "OoR"
 #define D_UV_LEVEL "紫外线水平"
+#define D_UV_POWER "UV Power"
 #define D_VERSION "版本"
 #define D_VOLTAGE "电压"
+#define D_WEIGHT "Weight"
 #define D_WARMLIGHT "暖"
 #define D_WEB_SERVER "Web Server"
 
@@ -206,6 +217,7 @@
 #define D_ERASED_SECTOR "擦除扇区"
 
 // webserver.ino
+#define D_NOSCRIPT "To use Tasmota, please enable JavaScript"
 #define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "当前是精简版固件 - 请升级"
 #define D_WEBSERVER_ACTIVE_ON "Web 服务器地址:"
 #define D_WITH_IP_ADDRESS "IP 地址:"
@@ -379,6 +391,7 @@
 // xdrv_09_timers.ino
 #define D_CONFIGURE_TIMER "定时器设置"
 #define D_TIMER_PARAMETERS "定时器参数"
+#define D_TIMER_ENABLE "启用定时器"
 #define D_TIMER_ARM "启用"
 #define D_TIMER_TIME "时间"
 #define D_TIMER_DAYS "天"
@@ -435,6 +448,14 @@
 #define D_ENVIRONMENTAL_CONCENTRATION "PM"     // Environmetal Particle Matter
 #define D_PARTICALS_BEYOND "颗粒物直径大于"
 
+// xsns_32_mpu6050.ino
+#define D_AX_AXIS "Accel. X-Axis"
+#define D_AY_AXIS "Accel. Y-Axis"
+#define D_AZ_AXIS "Accel. Z-Axis"
+#define D_GX_AXIS "Gyro X-Axis"
+#define D_GY_AXIS "Gyro Y-Axis"
+#define D_GZ_AXIS "Gyro Z-Axis"
+
 // sonoff_template.h
 #define D_SENSOR_NONE     "无"
 #define D_SENSOR_DHT11    "DHT11"
@@ -444,6 +465,7 @@
 #define D_SENSOR_I2C_SCL  "I2C SCL"
 #define D_SENSOR_I2C_SDA  "I2C SDA"
 #define D_SENSOR_WS2812   "WS2812"
+#define D_SENSOR_DFR562   "MP3 Player"
 #define D_SENSOR_IRSEND   "IRsend"
 #define D_SENSOR_SWITCH   "Switch"   // Suffix "1"
 #define D_SENSOR_BUTTON   "Button"   // Suffix "1"
@@ -462,7 +484,8 @@
 #define D_SENSOR_SPI_DC   "SPI DC"
 #define D_SENSOR_BACKLIGHT "BkLight"
 #define D_SENSOR_PMS5003  "PMS5003"
-#define D_SENSOR_SDS0X1   "SDS0X1"
+#define D_SENSOR_SDS0X1_RX "SDS0X1 Rx"
+#define D_SENSOR_SDS0X1_TX "SDS0X1 Tx"
 #define D_SENSOR_SBR_RX   "SerBr Rx"
 #define D_SENSOR_SBR_TX   "SerBr Tx"
 #define D_SENSOR_SR04_TRIG "SR04 Tri"
@@ -471,11 +494,18 @@
 #define D_SENSOR_SDM120_RX "SDM120 Rx"
 #define D_SENSOR_SDM630_TX "SDM630 Tx"
 #define D_SENSOR_SDM630_RX "SDM630 Rx"
+#define D_SENSOR_TM1638_CLK "TM16 CLK"
+#define D_SENSOR_TM1638_DIO "TM16 DIO"
+#define D_SENSOR_TM1638_STB "TM16 STB"
+#define D_SENSOR_HX711_SCK "HX711 SCK"
+#define D_SENSOR_HX711_DAT "HX711 DAT"
 
 // Units
 #define D_UNIT_AMPERE "安"
 #define D_UNIT_CENTIMETER "厘米"
 #define D_UNIT_HOUR "时"
+#define D_UNIT_INCREMENTS "inc"
+#define D_UNIT_KILOGRAM "kg"
 #define D_UNIT_KILOOHM "千欧"
 #define D_UNIT_KILOWATTHOUR "千瓦时"
 #define D_UNIT_LUX "勒克斯"
@@ -497,6 +527,7 @@
 #define D_UNIT_WATT "瓦"
 #define D_UNIT_WATTHOUR "瓦时"
 #define D_UNIT_HERTZ "赫兹"
+#define D_UNIT_WATT_METER_QUADRAT "W/m²"
 
 // Log message prefix
 #define D_LOG_APPLICATION "APP: "  // Application

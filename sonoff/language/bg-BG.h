@@ -28,7 +28,7 @@
  * Use online command StateText to translate ON, OFF, HOLD and TOGGLE.
  * Use online command Prefix to translate cmnd, stat and tele.
  *
- * Updated until v6.0.0a
+ * Updated until v6.2.1.8
 \*********************************************************************/
 
 //#define LANGUAGE_MODULE_NAME         // Enable to display "Module Generic" (ie Spanish), Disable to display "Generic Module" (ie English)
@@ -60,10 +60,12 @@
 #define D_BLINKOFF "Мигане изкл."
 #define D_BOOT_COUNT "Брой на стартиранията"
 #define D_BRIGHTLIGHT "Яркост"
+#define D_BSSID "BSSId"
 #define D_BUTTON "Бутон"
 #define D_BY "от"                    // Written by me
 #define D_BYTES "Байта"
 #define D_CELSIUS "Целзий"
+#define D_CHANNEL "Канал"
 #define D_CO2 "Въглероден диоксид"
 #define D_CODE "код"                // Button code
 #define D_COLDLIGHT "Хладна"
@@ -80,7 +82,7 @@
 #define D_DNS_SERVER "DNS Сървър"
 #define D_DONE "Изпълнено"
 #define D_DST_TIME "DST"
-#define D_ECO2 "eCO2"
+#define D_ECO2 "eCO₂"
 #define D_EMULATION "Емулация"
 #define D_ENABLED "Активиран"
 #define D_ERASE "Изтриване"
@@ -161,9 +163,18 @@
 #define D_USER "Потребител"
 #define D_UTC_TIME "UTC"
 #define D_UV_INDEX "UV индекс"
-#define D_UV_LEVEL "Ниво на ултравиолетово излъчване"
+#define D_UV_INDEX_1 "Нисък"
+#define D_UV_INDEX_2 "Среден"
+#define D_UV_INDEX_3 "Висок"
+#define D_UV_INDEX_4 "Много висок"
+#define D_UV_INDEX_5 "Изгаряне 1/2 степен"
+#define D_UV_INDEX_6 "Изгаряне 3-та степен"
+#define D_UV_INDEX_7 "Извън обхват"
+#define D_UV_LEVEL "UV ниво"
+#define D_UV_POWER "UV мощност"
 #define D_VERSION "Версия"
 #define D_VOLTAGE "Напрежение"
+#define D_WEIGHT "Weight"
 #define D_WARMLIGHT "Топла"
 #define D_WEB_SERVER "Уеб сървър"
 
@@ -171,8 +182,8 @@
 #define D_WARNING_MINIMAL_VERSION "ПРЕДУПРЕЖДЕНИЕ Тази версия не поддържа постоянни настройки"
 #define D_LEVEL_10 "ниво 1-0"
 #define D_LEVEL_01 "ниво 0-1"
-#define D_SERIAL_LOGGING_DISABLED "Серийния логинг изключен"
-#define D_SYSLOG_LOGGING_REENABLED "Системния логинг активиран"
+#define D_SERIAL_LOGGING_DISABLED "Серийният лог изключен"
+#define D_SYSLOG_LOGGING_REENABLED "Системният лог активиран"
 
 #define D_SET_BAUDRATE_TO "Задаване скорост на предаване (Baudrate)"
 #define D_RECEIVED_TOPIC "Получен топик"
@@ -184,7 +195,7 @@
 #define D_BLOCKED_LOOP "Блокиран цикъл"
 #define D_WPS_FAILED_WITH_STATUS "WPS конфигурацията е НЕУСПЕШНА със статус"
 #define D_ACTIVE_FOR_3_MINUTES "активно в течение на 3 минути"
-#define D_FAILED_TO_START "неуспешно стартиране"
+#define D_FAILED_TO_START "Неуспешно стартиране"
 #define D_PATCH_ISSUE_2186 "Проблем с патч 2186"
 #define D_CONNECTING_TO_AP "Свързване към точка за достъп"
 #define D_IN_MODE "в режим"
@@ -206,6 +217,7 @@
 #define D_ERASED_SECTOR "Изтрит сектор"
 
 // xdrv_02_webserver.ino
+#define D_NOSCRIPT "Разрешете JavaScript, за да използвате Tasmota"
 #define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "Минимален фърмуеър - моля надградете го"
 #define D_WEBSERVER_ACTIVE_ON "Уеб сървърът е активен на"
 #define D_WITH_IP_ADDRESS "с IP адрес"
@@ -230,7 +242,7 @@
 #define D_CONFIGURE_WIFI "Конфигурация на WiFi"
 #define D_CONFIGURE_MQTT "Конфигурация на MQTT"
 #define D_CONFIGURE_DOMOTICZ "Конфигурация на Domoticz"
-#define D_CONFIGURE_LOGGING "Конфигурация на логинга"
+#define D_CONFIGURE_LOGGING "Конфигурация на лога"
 #define D_CONFIGURE_OTHER "Драги конфигурации"
 #define D_CONFIRM_RESET_CONFIGURATION "Потвърдете изчистването"
 #define D_RESET_CONFIGURATION "Изчистване на конфигурацията"
@@ -264,7 +276,7 @@
 #define D_CLIENT "Клиент"
 #define D_FULL_TOPIC "Пълен топик"
 
-#define D_LOGGING_PARAMETERS "Параметри на логинга"
+#define D_LOGGING_PARAMETERS "Параметри на лога"
 #define D_SERIAL_LOG_LEVEL "Степен на серийния лог"
 #define D_WEB_LOG_LEVEL "Степен на Уеб лога"
 #define D_SYS_LOG_LEVEL "Степен на системния лог"
@@ -368,17 +380,18 @@
   #define D_DOMOTICZ_TEMP "Temp"
   #define D_DOMOTICZ_TEMP_HUM "Temp,Hum"
   #define D_DOMOTICZ_TEMP_HUM_BARO "Temp,Hum,Baro"
-  #define D_DOMOTICZ_POWER_ENERGY "Power,Energy"
-  #define D_DOMOTICZ_ILLUMINANCE "Illuminance"
-  #define D_DOMOTICZ_COUNT "Count/PM1"
-  #define D_DOMOTICZ_VOLTAGE "Voltage/PM2,5"
-  #define D_DOMOTICZ_CURRENT "Current/PM10"
-  #define D_DOMOTICZ_AIRQUALITY "AirQuality"
-#define D_DOMOTICZ_UPDATE_TIMER "Update timer"
+  #define D_DOMOTICZ_POWER_ENERGY "Мощност,Енергия"
+  #define D_DOMOTICZ_ILLUMINANCE "Осветеност"
+  #define D_DOMOTICZ_COUNT "Брояч/PM1"
+  #define D_DOMOTICZ_VOLTAGE "Напрежение/PM2,5"
+  #define D_DOMOTICZ_CURRENT "Ток/PM10"
+  #define D_DOMOTICZ_AIRQUALITY "Качество на въздуха"
+#define D_DOMOTICZ_UPDATE_TIMER "Период на опресняване"
 
 // xdrv_09_timers.ino
 #define D_CONFIGURE_TIMER "Конфигуриране на таймер"
 #define D_TIMER_PARAMETERS "Параметри на таймера"
+#define D_TIMER_ENABLE "Активиране на таймера"
 #define D_TIMER_ARM "Arm"
 #define D_TIMER_TIME "Време"
 #define D_TIMER_DAYS "Дни"
@@ -435,6 +448,14 @@
 #define D_ENVIRONMENTAL_CONCENTRATION "PM"     // Environmetal Particle Matter
 #define D_PARTICALS_BEYOND "Частици"
 
+// xsns_32_mpu6050.ino
+#define D_AX_AXIS "Ускорение - ос X"
+#define D_AY_AXIS "Ускорение - ос Y"
+#define D_AZ_AXIS "Ускорение - ос Z"
+#define D_GX_AXIS "Жироскоп - ос X"
+#define D_GY_AXIS "Жироскоп - ос Y"
+#define D_GZ_AXIS "Жироскоп - ос Z"
+
 // sonoff_template.h
 #define D_SENSOR_NONE     "Няма"
 #define D_SENSOR_DHT11    "DHT11"
@@ -444,6 +465,7 @@
 #define D_SENSOR_I2C_SCL  "I2C SCL"
 #define D_SENSOR_I2C_SDA  "I2C SDA"
 #define D_SENSOR_WS2812   "WS2812"
+#define D_SENSOR_DFR562   "MP3 плейър"
 #define D_SENSOR_IRSEND   "IRsend"
 #define D_SENSOR_SWITCH   "Ключ"   // Suffix "1"
 #define D_SENSOR_BUTTON   "Бутон"   // Suffix "1"
@@ -462,7 +484,8 @@
 #define D_SENSOR_SPI_DC   "SPI DC"
 #define D_SENSOR_BACKLIGHT "Подсветка"
 #define D_SENSOR_PMS5003  "PMS5003"
-#define D_SENSOR_SDS0X1   "SDS0X1"
+#define D_SENSOR_SDS0X1_RX "SDS0X1 Rx"
+#define D_SENSOR_SDS0X1_TX "SDS0X1 Tx"
 #define D_SENSOR_SBR_RX   "SerBr Rx"
 #define D_SENSOR_SBR_TX   "SerBr Tx"
 #define D_SENSOR_SR04_TRIG "SR04 Tri"
@@ -471,16 +494,23 @@
 #define D_SENSOR_SDM120_RX "SDM120 Rx"
 #define D_SENSOR_SDM630_TX "SDM630 Tx"
 #define D_SENSOR_SDM630_RX "SDM630 Rx"
+#define D_SENSOR_TM1638_CLK "TM16 CLK"
+#define D_SENSOR_TM1638_DIO "TM16 DIO"
+#define D_SENSOR_TM1638_STB "TM16 STB"
+#define D_SENSOR_HX711_SCK "HX711 SCK"
+#define D_SENSOR_HX711_DAT "HX711 DAT"
 
 // Units
 #define D_UNIT_AMPERE "A"
 #define D_UNIT_CENTIMETER "cm"
 #define D_UNIT_HERTZ "Hz"
 #define D_UNIT_HOUR "h"
+#define D_UNIT_KILOGRAM "kg"
+#define D_UNIT_INCREMENTS "inc"
 #define D_UNIT_KILOOHM "kΩ"
 #define D_UNIT_KILOWATTHOUR "kWh"
 #define D_UNIT_LUX "lx"
-#define D_UNIT_MICROGRAM_PER_CUBIC_METER "µg/m3"
+#define D_UNIT_MICROGRAM_PER_CUBIC_METER "µg/m³"
 #define D_UNIT_MICROMETER "µm"
 #define D_UNIT_MICROSECOND "µs"
 #define D_UNIT_MILLIAMPERE "mA"
@@ -497,6 +527,7 @@
 #define D_UNIT_VOLT "V"
 #define D_UNIT_WATT "W"
 #define D_UNIT_WATTHOUR "Wh"
+#define D_UNIT_WATT_METER_QUADRAT "W/m²"
 
 // Log message prefix
 #define D_LOG_APPLICATION "APP: "  // Application

@@ -28,7 +28,7 @@
  * Use online command StateText to translate ON, OFF, HOLD and TOGGLE.
  * Use online command Prefix to translate cmnd, stat and tele.
  *
- * Updated until v6.0.0a
+ * Updated until v6.2.1.11
 \*********************************************************************/
 
 #define LANGUAGE_MODULE_NAME         // Enable to display "Module Generic" (ie Spanish), Disable to display "Generic Module" (ie English)
@@ -60,10 +60,12 @@
 #define D_BLINKOFF "BlinkOff"
 #define D_BOOT_COUNT "Conteo Reinicios"
 #define D_BRIGHTLIGHT "Brillante"
+#define D_BSSID "BSSId"
 #define D_BUTTON "Botón"
 #define D_BY "por"                    // Written by me
 #define D_BYTES "Bytes"
 #define D_CELSIUS "Celsius"
+#define D_CHANNEL "Canal"
 #define D_CO2 "CO2"
 #define D_CODE "código"                // Button code
 #define D_COLDLIGHT "Fría"
@@ -131,7 +133,7 @@
 #define D_PROGRAM_SIZE "Tamaño Programa"
 #define D_PROJECT "Proyecto"
 #define D_RECEIVED "Recibido"
-#define D_RESTART "Reinicio"
+#define D_RESTART "Reiniciar"
 #define D_RESTARTING "Reiniciando"
 #define D_RESTART_REASON "Causa Reinicio"
 #define D_RESTORE "Restauración"
@@ -161,14 +163,23 @@
 #define D_USER "Usuario"
 #define D_UTC_TIME "UTC"
 #define D_UV_INDEX "Índice UV"
+#define D_UV_INDEX_1 "Bajo"
+#define D_UV_INDEX_2 "Medio"
+#define D_UV_INDEX_3 "Alto"
+#define D_UV_INDEX_4 "Peligroso"
+#define D_UV_INDEX_5 "Quemaduras 1 a 2 grad"
+#define D_UV_INDEX_6 "Quemaduras 3 grad"
+#define D_UV_INDEX_7 "Fuera de Rango"
 #define D_UV_LEVEL "Nivel UV"
+#define D_UV_POWER "UV Power"
 #define D_VERSION "Versión"
 #define D_VOLTAGE "Tensión"
+#define D_WEIGHT "Peso"
 #define D_WARMLIGHT "Cálida"
 #define D_WEB_SERVER "Servidor Web"
 
 // sonoff.ino
-#define D_WARNING_MINIMAL_VERSION "Precaución, esta versión no salva los cambios"
+#define D_WARNING_MINIMAL_VERSION "Cuidado, esta versión no guarda los cambios"
 #define D_LEVEL_10 "level 1-0"
 #define D_LEVEL_01 "level 0-1"
 #define D_SERIAL_LOGGING_DISABLED "Log serial deshabilitado"
@@ -188,12 +199,12 @@
 #define D_PATCH_ISSUE_2186 "Patch issue 2186"
 #define D_CONNECTING_TO_AP "Connectando a AP"
 #define D_IN_MODE "en modo"
-#define D_CONNECT_FAILED_NO_IP_ADDRESS "Falló Conección, Dirección IP no recibida"
-#define D_CONNECT_FAILED_AP_NOT_REACHED "Falló Conección, AP no pudo ser contactado"
-#define D_CONNECT_FAILED_WRONG_PASSWORD "Falló Conección, clave de AP incorrecta"
-#define D_CONNECT_FAILED_AP_TIMEOUT "Falló Conección, timeout de AP"
+#define D_CONNECT_FAILED_NO_IP_ADDRESS "Falló Conexión, Dirección IP no recibida"
+#define D_CONNECT_FAILED_AP_NOT_REACHED "Falló Conexión, AP no pudo ser contactado"
+#define D_CONNECT_FAILED_WRONG_PASSWORD "Falló Conexión, clave de AP incorrecta"
+#define D_CONNECT_FAILED_AP_TIMEOUT "Falló Conexión, timeout de AP"
 #define D_ATTEMPTING_CONNECTION "Intentando conectar..."
-#define D_CHECKING_CONNECTION "Probando conección..."
+#define D_CHECKING_CONNECTION "Probando conexión..."
 #define D_QUERY_DONE "Consulta lista. Servicio MQTT encontrado"
 #define D_MQTT_SERVICE_FOUND "Servicio MQTT encontrado en"
 #define D_FOUND_AT "encontrado en"
@@ -206,23 +217,24 @@
 #define D_ERASED_SECTOR "Sector borrado"
 
 // xdrv_02_webserver.ino
+#define D_NOSCRIPT "Habilitar JavaScript para usar Tasmota"
 #define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "Firmware MÍNIMO - actualice por favor"
 #define D_WEBSERVER_ACTIVE_ON "Servidor web activo en"
 #define D_WITH_IP_ADDRESS "con dirección IP"
 #define D_WEBSERVER_STOPPED "Servidor web detenido"
 #define D_FILE_NOT_FOUND "Archivo No Encontrado"
-#define D_REDIRECTED "Redireccinado al portal captivo"
+#define D_REDIRECTED "Redireccionado al portal captivo"
 #define D_WIFIMANAGER_SET_ACCESSPOINT_AND_STATION "Wifimanager como AccessPoint y Estación"
 #define D_WIFIMANAGER_SET_ACCESSPOINT "Wifimanager como AccessPoint"
 #define D_TRYING_TO_CONNECT "Intentado conectar dispositivo a la red"
 
 #define D_RESTART_IN "Reinicio en"
 #define D_SECONDS "segundos"
-#define D_DEVICE_WILL_RESTART "El dispositivo se reiniciará en pocos segundos"
+#define D_DEVICE_WILL_RESTART "El dispositivo se reiniciará en unos segundos"
 #define D_BUTTON_TOGGLE "Alternar ON/OFF"
 #define D_CONFIGURATION "Configuración"
 #define D_INFORMATION "Información"
-#define D_FIRMWARE_UPGRADE "Actualización Firmware"
+#define D_FIRMWARE_UPGRADE "Actualizar Firmware"
 #define D_CONSOLE "Consola"
 #define D_CONFIRM_RESTART "Confirmar Reinicio"
 
@@ -239,7 +251,7 @@
 #define D_MAIN_MENU "Menú Principal"
 
 #define D_MODULE_PARAMETERS "Parámetros del módulo"
-#define D_MODULE_TYPE "Tipo módulo"
+#define D_MODULE_TYPE "Tipo de módulo"
 #define D_GPIO "GPIO"
 #define D_SERIAL_IN "Serial In"
 #define D_SERIAL_OUT "Serial Out"
@@ -250,7 +262,7 @@
 #define D_NO_NETWORKS_FOUND "Ninguna red encontrada"
 #define D_REFRESH_TO_SCAN_AGAIN "Recargar página para buscar nuevamente"
 #define D_DUPLICATE_ACCESSPOINT "AccessPoint duplicado"
-#define D_SKIPPING_LOW_QUALITY "Ignorado debido a baja calidad"
+#define D_SKIPPING_LOW_QUALITY "Ignorado por baja calidad"
 #define D_RSSI "RSSI"
 #define D_WEP "WEP"
 #define D_WPA_PSK "WPA PSK"
@@ -268,7 +280,7 @@
 #define D_SERIAL_LOG_LEVEL "Nivel de log Serial"
 #define D_WEB_LOG_LEVEL "Nivel de log Web"
 #define D_SYS_LOG_LEVEL "Nivel de Syslog"
-#define D_MORE_DEBUG "Mas Debug"
+#define D_MORE_DEBUG "Más Debug"
 #define D_SYSLOG_HOST "Host del Syslog"
 #define D_SYSLOG_PORT "Puerto del Syslog"
 #define D_TELEMETRY_PERIOD "Período de Telemetría"
@@ -287,7 +299,7 @@
 #define D_CONFIGURATION_RESET "Configuración restablecida"
 
 #define D_PROGRAM_VERSION "Versión del Programa"
-#define D_BUILD_DATE_AND_TIME "Fecha y Hora de la Compilación"
+#define D_BUILD_DATE_AND_TIME "Fecha y Hora de Compilación"
 #define D_CORE_AND_SDK_VERSION "Versión Core/SDK"
 #define D_FLASH_WRITE_COUNT "Contador de escritura en Flash"
 #define D_MAC_ADDRESS "Dirección MAC"
@@ -333,16 +345,16 @@
 
 // xdrv_01_mqtt.ino
 #define D_FINGERPRINT "Verificar TLS fingerprint..."
-#define D_TLS_CONNECT_FAILED_TO "Falló Conección TLS a"
+#define D_TLS_CONNECT_FAILED_TO "Falló Conexión TLS a"
 #define D_RETRY_IN "Reintentando"
 #define D_VERIFIED "Verificado Fingerprint"
-#define D_INSECURE "Conección insegura por Fingerprint no válido"
-#define D_CONNECT_FAILED_TO "Falló Conección a"
+#define D_INSECURE "Conexión insegura por Fingerprint inválido"
+#define D_CONNECT_FAILED_TO "Falló Conexión a"
 
 // xplg_wemohue.ino
 #define D_MULTICAST_DISABLED "Multicast deshabilitado"
 #define D_MULTICAST_REJOINED "Multicast (re)conectado"
-#define D_MULTICAST_JOIN_FAILED "Conección Multicast fallida"
+#define D_MULTICAST_JOIN_FAILED "Conexión Multicast fallida"
 #define D_FAILED_TO_SEND_RESPONSE "Falla al enviar respuesta"
 
 #define D_WEMO "WeMo"
@@ -379,6 +391,7 @@
 // xdrv_09_timers.ino
 #define D_CONFIGURE_TIMER "Configuración Temporizadores"
 #define D_TIMER_PARAMETERS "Parámetros de Temporizadores"
+#define D_TIMER_ENABLE "Habilitar Temporizadores"
 #define D_TIMER_ARM "Activo"
 #define D_TIMER_TIME "Hora"
 #define D_TIMER_DAYS "Días"
@@ -435,6 +448,14 @@
 #define D_ENVIRONMENTAL_CONCENTRATION "PM"     // Environmetal Particle Matter
 #define D_PARTICALS_BEYOND "Partículas"
 
+// xsns_32_mpu6050.ino
+#define D_AX_AXIS "Accel. X-Axis"
+#define D_AY_AXIS "Accel. Y-Axis"
+#define D_AZ_AXIS "Accel. Z-Axis"
+#define D_GX_AXIS "Gyro X-Axis"
+#define D_GY_AXIS "Gyro Y-Axis"
+#define D_GZ_AXIS "Gyro Z-Axis"
+
 // sonoff_template.h
 #define D_SENSOR_NONE     "Ninguno"
 #define D_SENSOR_DHT11    "DHT11"
@@ -444,13 +465,14 @@
 #define D_SENSOR_I2C_SCL  "I2C SCL"
 #define D_SENSOR_I2C_SDA  "I2C SDA"
 #define D_SENSOR_WS2812   "WS2812"
+#define D_SENSOR_DFR562   "MP3 Player"
 #define D_SENSOR_IRSEND   "IR TX"
 #define D_SENSOR_SWITCH   "Llave"   // Suffix "1"
 #define D_SENSOR_BUTTON   "Botón"   // Suffix "1"
 #define D_SENSOR_RELAY    "Relé"    // Suffix "1i"
 #define D_SENSOR_LED      "Led"      // Suffix "1i"
 #define D_SENSOR_PWM      "PWM"      // Suffix "1"
-#define D_SENSOR_COUNTER  "Counter"  // Suffix "1"
+#define D_SENSOR_COUNTER  "Contador"  // Suffix "1"
 #define D_SENSOR_IRRECV   "IR RX"
 #define D_SENSOR_MHZ_RX   "MHZ Rx"
 #define D_SENSOR_MHZ_TX   "MHZ Tx"
@@ -462,7 +484,8 @@
 #define D_SENSOR_SPI_DC   "SPI DC"
 #define D_SENSOR_BACKLIGHT "BkLight"
 #define D_SENSOR_PMS5003  "PMS5003"
-#define D_SENSOR_SDS0X1   "SDS0X1"
+#define D_SENSOR_SDS0X1_RX "SDS0X1 Rx"
+#define D_SENSOR_SDS0X1_TX "SDS0X1 Tx"
 #define D_SENSOR_SBR_RX   "SerBr Rx"
 #define D_SENSOR_SBR_TX   "SerBr Tx"
 #define D_SENSOR_SR04_TRIG "SR04 Tri"
@@ -471,12 +494,19 @@
 #define D_SENSOR_SDM120_RX "SDM120 Rx"
 #define D_SENSOR_SDM630_TX "SDM630 Tx"
 #define D_SENSOR_SDM630_RX "SDM630 Rx"
+#define D_SENSOR_TM1638_CLK "TM16 CLK"
+#define D_SENSOR_TM1638_DIO "TM16 DIO"
+#define D_SENSOR_TM1638_STB "TM16 STB"
+#define D_SENSOR_HX711_SCK "HX711 SCK"
+#define D_SENSOR_HX711_DAT "HX711 DAT"
 
 // Units
 #define D_UNIT_AMPERE "A"
 #define D_UNIT_CENTIMETER "cm"
 #define D_UNIT_HERTZ "Hz"
 #define D_UNIT_HOUR "Hr"
+#define D_UNIT_INCREMENTS "inc"
+#define D_UNIT_KILOGRAM "kg"
 #define D_UNIT_KILOOHM "kOhm"
 #define D_UNIT_KILOWATTHOUR "kWh"
 #define D_UNIT_LUX "lx"
@@ -497,6 +527,7 @@
 #define D_UNIT_VOLT "V"
 #define D_UNIT_WATT "W"
 #define D_UNIT_WATTHOUR "Wh"
+#define D_UNIT_WATT_METER_QUADRAT "W/m²"
 
 // Log message prefix
 #define D_LOG_APPLICATION "APP: "  // Application

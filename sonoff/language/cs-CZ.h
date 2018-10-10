@@ -28,7 +28,7 @@
  * Use online command StateText to translate ON, OFF, HOLD and TOGGLE.
  * Use online command Prefix to translate cmnd, stat and tele.
  *
- * Updated until v5.12.0n
+ * Updated until v6.2.1.11
 \*********************************************************************/
 
 //#define LANGUAGE_MODULE_NAME         // Enable to display "Module Generic" (ie Spanish), Disable to display "Generic Module" (ie English)
@@ -60,10 +60,12 @@
 #define D_BLINKOFF "BlikáníVyp"
 #define D_BOOT_COUNT "Počítadlo spuštění"
 #define D_BRIGHTLIGHT "Světlý"
+#define D_BSSID "BSSId"
 #define D_BUTTON "Tlačítko"
 #define D_BY "by"                    // Written by me
 #define D_BYTES "Bytů"
 #define D_CELSIUS "°C"
+#define D_CHANNEL "Channel"
 #define D_CO2 "CO2"
 #define D_CODE "kód"                 // Button code
 #define D_COLDLIGHT "Studené světlo"
@@ -92,7 +94,7 @@
 #define D_FALSE "Nepravda"
 #define D_FILE "Soubor"
 #define D_FREE_MEMORY "Volná paměť"
-#define D_FREQUENCY "Frequency"
+#define D_FREQUENCY "Kmitočet"
 #define D_GAS "Plyn"
 #define D_GATEWAY "Výchozí brána"
 #define D_GROUP "Skupina"
@@ -122,11 +124,11 @@
 #define D_PORT "Port"
 #define D_POWER_FACTOR "Účiník"
 #define D_POWERUSAGE "Příkon"
-#define D_POWERUSAGE_ACTIVE "Active Power"
-#define D_POWERUSAGE_APPARENT "Apparent Power"
-#define D_POWERUSAGE_REACTIVE "Reactive Power"
+#define D_POWERUSAGE_ACTIVE "Činný příkon"
+#define D_POWERUSAGE_APPARENT "Zdánlivý příkon"
+#define D_POWERUSAGE_REACTIVE "Jalový příkon"
 #define D_PRESSURE "Tlak"
-#define D_PRESSUREATSEALEVEL "Tlak na úrovni hladiny moře"
+#define D_PRESSUREATSEALEVEL "Tlak na hladině moře"
 #define D_PROGRAM_FLASH_SIZE "Velikost paměti flash"
 #define D_PROGRAM_SIZE "Velikost programu"
 #define D_PROJECT "Projekt"
@@ -161,9 +163,18 @@
 #define D_USER "Uživatel"
 #define D_UTC_TIME "UTC"
 #define D_UV_INDEX "UV Index"
+#define D_UV_INDEX_1 "Nízký"
+#define D_UV_INDEX_2 "Střední"
+#define D_UV_INDEX_3 "Vysoký"
+#define D_UV_INDEX_4 "Nebezpečný"
+#define D_UV_INDEX_5 "Popál1/2"
+#define D_UV_INDEX_6 "Popál3"
+#define D_UV_INDEX_7 "MimoRozsah"
 #define D_UV_LEVEL "úroveň UV"
+#define D_UV_POWER "UV Power"
 #define D_VERSION "Verze"
 #define D_VOLTAGE "Napětí"
+#define D_WEIGHT "Hmotnost"
 #define D_WARMLIGHT "Teplé světlo"
 #define D_WEB_SERVER "Web Server"
 
@@ -206,6 +217,7 @@
 #define D_ERASED_SECTOR "Smazaný sektor"
 
 // xdrv_02_webserver.ino
+#define D_NOSCRIPT "Pro používání prostředí Tasmota povolte JavaScript"
 #define D_MINIMAL_FIRMWARE_PLEASE_UPGRADE "Firmware MINIMÁLNÍ - prosím zaktualizujte"
 #define D_WEBSERVER_ACTIVE_ON "Aktivní Web server"
 #define D_WITH_IP_ADDRESS "na IP adrese"
@@ -321,10 +333,10 @@
 #define D_UPLOAD_ERR_7 "Nahrávání přerušeno"
 #define D_UPLOAD_ERR_8 "Špatný soubor"
 #define D_UPLOAD_ERR_9 "Soubor je příliš velký"
-#define D_UPLOAD_ERR_10 "Failed to init RF chip"
-#define D_UPLOAD_ERR_11 "Failed to erase RF chip"
-#define D_UPLOAD_ERR_12 "Failed to write to RF chip"
-#define D_UPLOAD_ERR_13 "Failed to decode RF firmware"
+#define D_UPLOAD_ERR_10 "Chyba inicializace RF chipu"
+#define D_UPLOAD_ERR_11 "Chyba smazání RF chipu"
+#define D_UPLOAD_ERR_12 "Chyba při zápisu do RF chipu"
+#define D_UPLOAD_ERR_13 "Chyba dekódování RF firmwaru"
 #define D_UPLOAD_ERROR_CODE "Chyba nahrávání"
 
 #define D_ENTER_COMMAND "Vlož příkaz"
@@ -379,6 +391,7 @@
 // xdrv_09_timers.ino
 #define D_CONFIGURE_TIMER "Nastavení Časovače"
 #define D_TIMER_PARAMETERS "Časovač"
+#define D_TIMER_ENABLE "Povol časovače"
 #define D_TIMER_ARM "Aktivní"
 #define D_TIMER_TIME "Čas"
 #define D_TIMER_DAYS "Dny"
@@ -435,6 +448,14 @@
 #define D_ENVIRONMENTAL_CONCENTRATION "PM"     // Environmetal Particle Matter
 #define D_PARTICALS_BEYOND "částic"
 
+// xsns_32_mpu6050.ino
+#define D_AX_AXIS "Accel. osa-X"
+#define D_AY_AXIS "Accel. osa-Y"
+#define D_AZ_AXIS "Accel. osa-Z"
+#define D_GX_AXIS "Gyro osa-X"
+#define D_GY_AXIS "Gyro osa-Y"
+#define D_GZ_AXIS "Gyro osa-Z"
+
 // sonoff_template.h
 #define D_SENSOR_NONE     "Není"
 #define D_SENSOR_DHT11    "DHT11"
@@ -444,6 +465,7 @@
 #define D_SENSOR_I2C_SCL  "I2C SCL"
 #define D_SENSOR_I2C_SDA  "I2C SDA"
 #define D_SENSOR_WS2812   "WS2812"
+#define D_SENSOR_DFR562   "MP3 Player"
 #define D_SENSOR_IRSEND   "IRsend"
 #define D_SENSOR_SWITCH   "Spínač"   // Suffix "1"
 #define D_SENSOR_BUTTON   "Tlačítko"   // Suffix "1"
@@ -462,7 +484,8 @@
 #define D_SENSOR_SPI_DC   "SPI DC"
 #define D_SENSOR_BACKLIGHT "BkLight"
 #define D_SENSOR_PMS5003  "PMS5003"
-#define D_SENSOR_SDS0X1   "SDS0X1"
+#define D_SENSOR_SDS0X1_RX "SDS0X1 Rx"
+#define D_SENSOR_SDS0X1_TX "SDS0X1 Tx"
 #define D_SENSOR_SBR_RX   "SerBr Rx"
 #define D_SENSOR_SBR_TX   "SerBr Tx"
 #define D_SENSOR_SR04_TRIG "SR04 Tri"
@@ -471,12 +494,19 @@
 #define D_SENSOR_SDM120_RX "SDM120 Rx"
 #define D_SENSOR_SDM630_TX "SDM630 Tx"
 #define D_SENSOR_SDM630_RX "SDM630 Rx"
+#define D_SENSOR_TM1638_CLK "TM16 CLK"
+#define D_SENSOR_TM1638_DIO "TM16 DIO"
+#define D_SENSOR_TM1638_STB "TM16 STB"
+#define D_SENSOR_HX711_SCK "HX711 SCK"
+#define D_SENSOR_HX711_DAT "HX711 DAT"
 
 // Units
 #define D_UNIT_AMPERE "A"
 #define D_UNIT_CENTIMETER "cm"
 #define D_UNIT_HERTZ "Hz"
 #define D_UNIT_HOUR "hod"
+#define D_UNIT_KILOGRAM "kg"
+#define D_UNIT_INCREMENTS "inc"
 #define D_UNIT_KILOOHM "kOhm"
 #define D_UNIT_KILOWATTHOUR "kWh"
 #define D_UNIT_LUX "lx"
@@ -497,6 +527,7 @@
 #define D_UNIT_VOLT "V"
 #define D_UNIT_WATT "W"
 #define D_UNIT_WATTHOUR "Wh"
+#define D_UNIT_WATT_METER_QUADRAT "W/m²"
 
 // Log message prefix
 #define D_LOG_APPLICATION "APP: "  // Application

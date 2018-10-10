@@ -126,7 +126,6 @@ int mod(int a, int b)
    return ret;
 }
 
-#define cmin(a,b) ((a)<(b)?(a):(b))
 
 void Ws2812UpdatePixelColor(int position, struct WsColor hand_color, float offset)
 {
@@ -140,9 +139,9 @@ void Ws2812UpdatePixelColor(int position, struct WsColor hand_color, float offse
 
   color = strip->GetPixelColor(mod_position);
   float dimmer = 100 / (float)Settings.light_dimmer;
-  color.R = cmin(color.R + ((hand_color.red / dimmer) * offset), 255);
-  color.G = cmin(color.G + ((hand_color.green / dimmer) * offset), 255);
-  color.B = cmin(color.B + ((hand_color.blue / dimmer) * offset), 255);
+  color.R = tmin(color.R + ((hand_color.red / dimmer) * offset), 255);
+  color.G = tmin(color.G + ((hand_color.green / dimmer) * offset), 255);
+  color.B = tmin(color.B + ((hand_color.blue / dimmer) * offset), 255);
   strip->SetPixelColor(mod_position, color);
 }
 
@@ -410,7 +409,7 @@ void Ws2812ShowScheme(uint8_t scheme)
 {
   switch (scheme) {
     case 0:  // Clock
-      if (((STATES/10)*2 == state) || (ws_show_next)) {
+      if ((1 == state_250mS) || (ws_show_next)) {
         Ws2812Clock();
         ws_show_next = 0;
       }

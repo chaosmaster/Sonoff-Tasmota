@@ -199,21 +199,6 @@ uint8_t SnfBrUpdateInit()
 
 /********************************************************************************************/
 
-void SonoffBridgeSendRaw(char *codes, int size)
-{
-  char *p;
-  char stemp[3];
-  uint8_t code;
-
-  while (size > 0) {
-    snprintf(stemp, sizeof(stemp), codes);
-    code = strtol(stemp, &p, 16);
-    Serial.write(code);
-    size -= 2;
-    codes += 2;
-  }
-}
-
 void SonoffBridgeReceivedRaw()
 {
   // Decoding according to https://github.com/Portisch/RF-Bridge-EFM8BB1
@@ -316,13 +301,20 @@ void SonoffBridgeReceived()
 boolean SonoffBridgeSerialInput()
 {
   // iTead Rf Universal Transceiver Module Serial Protocol Version 1.0 (20170420)
+  int8_t receive_len = 0;
+
   if (sonoff_bridge_receive_flag) {
     if (sonoff_bridge_receive_raw_flag) {
       if (!serial_in_byte_counter) {
         serial_in_buffer[serial_in_byte_counter++] = 0xAA;
       }
       serial_in_buffer[serial_in_byte_counter++] = serial_in_byte;
-      if (0x55 == serial_in_byte) {  // 0x55 - End of text
+      if (serial_in_byte_counter > 2) {
+        if ((0xA6 == serial_in_buffer[1]) || (0xAB == serial_in_buffer[1])) {  // AA A6 06 023908010155 55 - 06 is receive_len
+          receive_len = serial_in_buffer[2] + 3 - serial_in_byte_counter;      // Get at least receive_len bytes
+        }
+      }
+      if ((0 == receive_len) && (0x55 == serial_in_byte)) {  // 0x55 - End of text
         SonoffBridgeReceivedRaw();
         sonoff_bridge_receive_flag = 0;
         return 1;
@@ -545,11 +537,11 @@ boolean SonoffBridgeCommand()
           break;
         case 192:  // 0xC0 - Beep
           char beep[] = "AAC000C055";
-          SonoffBridgeSendRaw(beep, sizeof(beep));
+          SerialSendRaw(beep, sizeof(beep));
           break;
         }
       } else {
-        SonoffBridgeSendRaw(XdrvMailbox.data, XdrvMailbox.data_len);
+        SerialSendRaw(XdrvMailbox.data, XdrvMailbox.data_len);
         sonoff_bridge_receive_raw_flag = 1;
       }
     }
@@ -584,6 +576,9 @@ boolean Xdrv06(byte function)
         break;
       case FUNC_COMMAND:
         result = SonoffBridgeCommand();
+        break;
+      case FUNC_SERIAL:
+        result = SonoffBridgeSerialInput();
         break;
     }
   }
